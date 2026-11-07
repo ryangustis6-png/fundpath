@@ -133,7 +133,7 @@ function evaluateProposal(p, org, S) {
     if (bad) add(5, { rule: "PROHIBITED", level: "deny", line: l.id, msg: `"${bad}" can't be bought with student org funds.`, fix: { type: "remove", label: "Remove line" } });
     const nf = NOTFUNDED_WORDS.find(([w]) => findWord(text, [w]));
     if (nf && !bad) add(5, { rule: "NOTFUNDED", level: "deny", line: l.id, msg: `ASG doesn't fund ${nf[1]} (SR §19.1).`, fix: { type: "remove", label: "Remove line" } });
-    if (c.third && !l.quote) add(5, { rule: "QUOTES3P", level: "deny", line: l.id, msg: `Third-party ${c.group === "speakers" ? "speaker" : "vendor"} needs a written quote. Without it, none of ${e ? `"${e.name}"` : "this event"}'s expenses are approved.`, fix: { type: "quote", label: "Attach quote" } });
+    if (c.third && !l.quote) add(5, { rule: "QUOTES3P", level: "deny", line: l.id, msg: `Third-party ${c.group === "speakers" ? "speaker" : "vendor"} needs a written quote. Without it, none of ${e ? `"${e.name}"` : "this event"}'s expenses are approved.`, fix: { type: "quote", label: "Find real quote" } });
     else if (!c.third && (c.group === "hotel" || c.group === "flight" || amt(l) > S.quoteOver) && !l.quote) add(5, { rule: "QUOTES", level: "deny", line: l.id, msg: `Quote required (${c.group === "hotel" ? "hotel" : c.group === "flight" ? "flight" : "over $1,000"}).`, fix: { type: "quote", label: "Attach quote" } });
     if (c.capital) {
       if (amt(l) > S.capitalQuoteOver && !l.quote && amt(l) <= S.quoteOver) add(5, { rule: "CAPITAL", level: "deny", line: l.id, msg: "Capital items over $300 need a written estimate or online quote.", fix: { type: "quote", label: "Attach quote" } });
@@ -145,6 +145,8 @@ function evaluateProposal(p, org, S) {
       else if (!/sample|educational|tasting|demo/i.test(text)) add(5, { rule: "LIMFOOD", level: "warn", line: l.id, msg: "Say the food is sample-size and part of the educational program (SR §19.1).", fix: { type: "comment", label: "Write it for me" } });
     }
   });
+
+  p.lines.filter(l => l.quoteEvidence).forEach(l => add(5, { rule: "QUOTES", level: "warn", line: l.id, msg: "This researched offer needs Treasury review of supplier evidence, dates, fees and conditions. It is not a booking or institutional approval." }));
 
   // 6. Purpose of ASG funding (event criteria + justification)
   p.events.forEach(e => { if (e.type === "Trip") return; const r = eventPct(e, org); if (r.pct < 100) add(6, { rule: "EVENTCRIT", level: "info", event: e.id, msg: `"${e.name}" meets ${r.met.length ? r.met.join(", ") : "no criteria"}, so it's funded at ${r.pct}%.` }); if (e.admission) add(6, { rule: "FUNDRAISE", level: "warn", event: e.id, msg: `"${e.name}" charges admission, so it counts as a fundraiser. Disclose it and report sales.` }); });
@@ -240,13 +242,13 @@ function extractFromTranscript(text, org) {
       if (/hotel|overnight|nights?\b/.test(t)) { cur.type = "Trip"; const n = t.match(/(\w+)\s+nights?/); if (n) cur.nights = NUMWORDS[n[1]] || +n[1] || cur.nights; const tr = t.match(/(\w+)\s+(?:members|students|people|travelers)/); if (tr) cur.travelers = NUMWORDS[tr[1]] || +tr[1] || cur.travelers; }
     }
     const a = parseAmount(s);
-    if ((!a || !a.amount) && /quotes?|estimates?/.test(t) && lines.length) { const lastE = cur ? lines.filter(l => l.eventId === cur.id) : [lines[lines.length - 1]]; lastE.forEach(l => { l.quote = true; }); }
+    if ((!a || !a.amount) && /quotes?|estimates?/.test(t) && lines.length) { const lastE = cur ? lines.filter(l => l.eventId === cur.id) : [lines[lines.length - 1]]; lastE.forEach(l => { l.quoteMentioned = true; }); }
     if (!a || !a.amount) return;
     const hit = CAT_KEYS.find(([, re]) => re.test(t)); if (!hit) return;
     let cat = hit[0];
     if (cat === "Event: Promotional materials" && !cur) cat = "Admin: Paper supplies";
     if (CATS[cat].sec === "event" && !cur) cat = cat === "Event: Food (sample-size)" ? cat : cat;
-    const quote = /quote|estimate|invoice/.test(t);
+    const quote = false; // Spoken mentions are not source evidence.
     const item = (itemLabel(s, hit[1], org.hub) || cat.replace(/^\w+: /, "")) + (a.qty ? ` (${a.qty} × ${money(a.unit)})` : "");
     lines.push({ id: "L" + (lines.length + 1), eventId: CATS[cat].sec === "event" || CATS[cat].sec === "trip" ? (cur ? cur.id : "") : "", item, cat, amount: a.amount, comment: s.length > 160 ? s.slice(0, 157) + "…" : s, quote });
     heard.push({ s, cat, amount: a.amount });
@@ -401,7 +403,7 @@ function applyFix(p, org, d) {
       for (let i = inG.length - 1; i >= 0 && excess > 0; i--) { const cut = Math.min(+inG[i].amount, excess); inG[i].amount = cents(+inG[i].amount - cut); excess = cents(excess - cut); }
       p.lines = p.lines.filter(x => +x.amount > 0 || !inG.includes(x)); break;
     }
-    case "quote": if (l) { l.quote = true; l.quoteFile = "vendor_quote.pdf"; } break;
+    case "quote": if (l) { l.quoteRequested = true; } break;
     case "remove": p.lines = p.lines.filter(x => x.id !== d.line); break;
     case "delEvent": p.events = p.events.filter(x => x.id !== d.event); p.lines.forEach(x => { if (x.eventId === d.event) x.eventId = ""; }); break;
     case "ack": p.ack = { hub: true, itemized: true, quotes: true, noGuarantee: true }; break;

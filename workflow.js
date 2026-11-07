@@ -83,28 +83,32 @@ render = function() {
 let liveConversation = null, conversationStarting = false;
 const meetingViewWithWorkflow = VIEWS.meeting;
 VIEWS.meeting = () => `<section class="card"><h2>ElevenLabs conversational meeting agent</h2><p>Optional live service: starting sends microphone audio to ElevenLabs. Use a public demo agent with transcript events enabled. No API key belongs in this field. The agent can discuss the meeting; only student speech can confirm a demo submission.</p><label class="check"><input type="checkbox" data-a="enableLiveElevenLabs" ${liveElevenLabsEnabled ? "checked" : ""}> Enable live ElevenLabs for this session. This may use billable credits; check your plan and billing first.</label><label>Public ElevenLabs agent ID<input id="agentId" value="${esc(S.settings.demoAgentId || '')}" placeholder="agent_…"></label><button class="btn" data-a="startAgent" ${liveConversation || conversationStarting ? 'disabled' : ''}>Start live agent</button> <button class="btn ghost" data-a="stopAgent" ${liveConversation ? '' : 'disabled'}>Stop live agent</button><p role="status">${liveConversation ? 'Live ElevenLabs session active' : conversationStarting ? 'Connecting…' : 'Disconnected. Browser voice and demo meeting remain available.'}</p></section>` + meetingViewWithWorkflow();
-A.startAgent = async () => {
+let voiceSessionEpoch = 0;
+A.startAgent = async (options = {}) => {
   if (liveConversation || conversationStarting) return;
   if (!liveElevenLabsEnabled) return toast("Live ElevenLabs is disabled. Check billing before enabling it.", "bad");
-  const agentId = document.querySelector('#agentId').value.trim();
+  const agentId = String(options.agentId || document.querySelector('#agentId')?.value || S.settings.demoAgentId || '').trim();
   if (!/^agent_[a-zA-Z0-9_-]+$/.test(agentId)) return toast('Enter a public demo agent ID','bad');
-  S.settings.demoAgentId = agentId; save(); conversationStarting = true; render();
+  S.settings.demoAgentId = agentId; save(); conversationStarting = true; UI.voiceError = ""; const epoch = ++voiceSessionEpoch; render();
   try {
     stopListening();
     const { Conversation } = await import('https://esm.sh/@elevenlabs/client@1.35.0');
-    liveConversation = await Conversation.startSession({ agentId, connectionType:'websocket',
+    if (epoch !== voiceSessionEpoch) return;
+    const session = await Conversation.startSession({ agentId, connectionType:'websocket',
       onMessage: msg => {
         if (!msg.message || msg.isFinal === false) return;
         if (msg.source === 'user' || msg.role === 'user') heard(msg.message, 'Exec board');
         else { M().transcript.push(['ElevenLabs agent',String(msg.message)]); save(); paintTranscript(); }
       },
-      onDisconnect: () => { liveConversation = null; render(); },
-      onError: () => toast('Live agent failed. Browser voice or the demo meeting is still available.','bad')
+      onDisconnect: () => { if (epoch === voiceSessionEpoch) { liveConversation = null; conversationStarting = false; render(); } },
+      onError: () => { UI.voiceError = 'The voice connection failed. Check the public agent ID, its allowed website domains and microphone access.'; render(); }
     });
-  } catch { toast('Could not connect. Check the public agent ID, microphone permission, and connection.','bad'); }
-  finally { conversationStarting = false; render(); }
+    if (epoch !== voiceSessionEpoch) { await session.endSession(); return; }
+    liveConversation = session;
+  } catch { UI.voiceError = 'Could not connect. Check the public agent ID, microphone access and allowed website domains in ElevenLabs.'; toast(UI.voiceError,'bad'); }
+  finally { if (epoch === voiceSessionEpoch) conversationStarting = false; render(); }
 };
-A.stopAgent = async () => { const session = liveConversation; liveConversation = null; if (session) await session.endSession(); render(); };
+A.stopAgent = async () => { ++voiceSessionEpoch; conversationStarting = false; const session = liveConversation; liveConversation = null; if (session) await session.endSession(); render(); };
 // Keep bounded receipt bytes in the browser backup, not just the file name.
 document.addEventListener('change', async event => {
   const el = event.target;

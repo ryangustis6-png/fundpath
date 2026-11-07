@@ -33,8 +33,7 @@ function answerQuestion(p, org, q, ans) {
   const t = String(ans || "").trim();
   switch (q.kind) {
     case "quote":
-      if (YES.test(t) && !/\bno\b/i.test(t)) { if (l) { l.quote = true; l.quoteFile = "quote (confirmed in meeting).pdf"; } return { note: `Quote confirmed for ${l ? l.item : "line"}`, ok: true }; }
-      if (l) p.lines = p.lines.filter(x => x !== l); return { note: `Took out ${l ? l.item : "line"}: no written quote`, ok: true };
+      if (l) { l.quote = false; l.quoteRequested = true; } return { note: `Quote research needed for ${l ? l.item : "line"}; no document has been attached`, ok: true, review: true };
     case "itemize":
       if (NO.test(t) && t.length < 25) { p.lines = p.lines.filter(x => x !== l); return { note: `Took out ${l ? l.item : "line"}`, ok: true }; }
       if (l && t.length > 3) { const clean = t.replace(/^(it'?s|they'?re|we need|for|just)\s+/i, "").replace(/[.!]$/, ""); l.item = clean.charAt(0).toUpperCase() + clean.slice(1); const hit = CAT_KEYS.find(([c, re]) => re.test(lc(clean)) && CATS[c].sec === CATS[l.cat].sec); if (hit) l.cat = hit[0]; return { note: `Itemized as "${l.item}"`, ok: true }; }

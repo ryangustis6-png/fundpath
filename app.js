@@ -116,7 +116,7 @@ function viewHome() {
     <div class="pipe">${steps.map((s, i) => `<div class="stage ${s.done ? "done" : s.now ? "now" : ""}"><i>${s.done ? "✓" : i + 1}</i><b>${s.t}</b><span>${esc(s.s)}</span><small>${s.done ? "" : "With: " + esc(s.who)}</small></div>`).join("")}</div></section>
   <div class="split2">
     <section class="card"><h2>Needs your attention</h2>${tasks.length ? `<ul class="todo">${tasks.map(t => `<li class="${t.sev}"><p>${esc(t.title)} ${ruleTag(t.rule)}</p><button class="btn sm" data-a="go" data-id="${t.go}">Open</button></li>`).join("")}</ul>` : `<p class="muted">You're all caught up.</p>`}</section>
-    <section class="card"><h2>Eligibility <small class="muted">pulled automatically</small></h2>${readinessHtml(o)}</section>
+    <section class="card"><h2>Eligibility <small class="muted">workspace inputs</small></h2>${readinessHtml(o)}</section>
   </div>
   <section class="card"><h2>Recent activity</h2>${S.log.filter(l => l.orgId === o.id || !l.orgId).length ? `<ul class="log">${S.log.filter(l => l.orgId === o.id || !l.orgId).slice(0, 8).map(l => `<li><time>${new Date(l.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</time>${esc(l.text)}</li>`).join("")}</ul>` : `<p class="muted">Actions you take show up here.</p>`}</section>`;
 }
@@ -124,7 +124,7 @@ function viewHome() {
 function viewProposal() {
   const o = ORG(); const p = proposalFor(o.id);
   if (!p) return `<header class="ph"><div><h1>ASG Funding Proposal</h1><p>Your original budget for ${esc(S.settings.semester)}. Everything you spend later has to match it.</p></div></header>
-    <section class="card empty-card"><h2>No ${esc(S.settings.semester)} proposal yet</h2><p>FundPath pre-fills Step 1 from Miami Central and checks every line against ASG's rules as you type. If all 7 committee criteria pass, it's approved instantly.</p><button class="btn" data-a="newProposal">Start proposal</button></section>`;
+    <section class="card empty-card"><h2>No ${esc(S.settings.semester)} proposal yet</h2><p>FundPath pre-fills Step 1 from your workspace profile and checks every line against ASG's rules as you type. If all 7 committee criteria pass, it's approved instantly.</p><button class="btn" data-a="newProposal">Start proposal</button></section>`;
   const ev = evaluateProposal(p, o, S.settings);
   const ro = !["draft", "returned"].includes(p.status) || S.role !== "treasurer";
   const dis = ro ? "disabled" : "";
@@ -136,7 +136,7 @@ function viewProposal() {
     <td><select data-f="ln:${l.id}:cat" ${dis}>${catOpts(l.cat, kind)}</select></td>
     <td class="r"><input class="num" type="number" min="0" step="0.01" data-f="ln:${l.id}:amount" value="${esc(l.amount)}" ${dis}></td>
     <td><input data-f="ln:${l.id}:comment" value="${esc(l.comment)}" ${dis} placeholder="How it serves the event / org"></td>
-    <td class="c"><label class="mini"><input type="checkbox" data-f="ln:${l.id}:quote" ${l.quote ? "checked" : ""} ${dis}> quote</label></td>
+    <td class="c">${l.quoteEvidence ? `<span class="small">Source attached · review required</span>` : l.quote ? `<span class="small">Sample quote on record</span>` : `<span class="small muted">No quote</span>`}${!ro ? `<button class="btn ghost sm" data-a="findLineQuote" data-id="${l.id}">Find quote</button>` : ""}</td>
     <td id="lv-${l.id}">${lvl(ev.lineLevel[l.id])}</td>
     ${ro ? "" : `<td><button class="x" data-a="delLine" data-id="${l.id}">×</button></td>`}</tr>`;
   const eventLines = p.lines.filter(l => isEv(l.cat));
@@ -150,7 +150,7 @@ function viewProposal() {
   ${p.status === "review" ? `<div class="banner info"><b>With the ASG Funding Committee.</b> FundPath flagged items that need a human decision. Expect a reply within 10 academic days, and you'll see it here.</div>` : ""}
   <div class="split">
     <div>
-      <section class="card"><h2>Step 1 · Club info <small class="muted">pulled from Miami Central. Fix anything wrong in Org & eligibility.</small></h2>
+      <section class="card"><h2>Step 1 · Club info <small class="muted">workspace profile. Check public campus information in Campus & voice.</small></h2>
         <div class="kvs">${f1("Organization", o.name, !!o.name)}${f1("Entity email", o.entityEmail, /@miamioh\.edu$/.test(o.entityEmail || ""))}${f1("Tier status", `Tier ${o.tier} (${money(S.settings.tierMax[o.tier])}/semester max)`, !!o.redBrick)}${f1("President", `${o.president} · ${o.presidentEmail}`, !!o.president)}${f1("Treasurer", `${o.treasurer} · ${o.treasurerEmail}`, !!o.treasurer)}${f1("Advisor", o.advisor, !!o.advisor)}${f1("SA1####", o.worktag, /^SA1\d{4}$/.test(o.worktag || ""))}</div>
         <label class="inline">ASG funding already received this semester<input type="number" min="0" data-f="p:prior" value="${esc(p.prior)}" ${dis}></label>
         <div class="acks">${[["hub", "Events and trips are registered on Miami Central"], ["itemized", "Budget is itemized into specific expenses"], ["quotes", "Quotes attached for hotels, flights and items over $1,000"], ["noGuarantee", "Eligibility doesn't guarantee approval"]].map(([k, t]) => `<label class="check"><input type="checkbox" data-f="ack:${k}" ${(p.ack || {})[k] ? "checked" : ""} ${dis}> ${t}</label>`).join("")}</div>
@@ -181,7 +181,7 @@ function viewProposal() {
   </div>`;
 }
 function proposalSide(p, o, ev, ro) {
-  const autoFix = ev.flags.filter(f => f.fix && f.fix.type !== "focus" && f.fix.type !== "org").length;
+  const autoFix = ev.flags.filter(f => f.fix && f.fix.type !== "focus" && f.fix.type !== "org" && f.fix.type !== "quote").length;
   return `<section class="card stick">
     <div class="score"><div class="ring" style="--p:${Math.round(ev.passed / 7 * 100)}"><b>${ev.passed}/7</b></div><div><b>Committee criteria</b><p class="muted">${ev.auto ? "All pass: approves automatically" : ev.flags.some(f => f.level === "deny") ? "ASG would deny this as written" : "Would go to the committee for review"}</p></div></div>
     <ul class="crit">${ev.criteria.map(c => `<li class="${c.level}"><i>${c.level === "ok" ? "✓" : c.level === "warn" ? "!" : "✕"}</i>${c.n}. ${esc(c.title)}</li>`).join("")}</ul>
@@ -517,7 +517,7 @@ const A = {
   delLine: d => { const p = proposalFor(S.orgId); p.lines = p.lines.filter(l => l.id !== d.id); save(); render(); },
   fixP: d => { const p = proposalFor(S.orgId); applyPFix(p, ORG(), d); save(); render(); if (UI.focus) { const el = document.getElementById(UI.focus); UI.focus = null; if (el) { el.focus(); el.select(); } } else toast("Fixed"); },
   fixAllP: () => { const p = proposalFor(S.orgId); const o = ORG(); let n = 0, guard = 60;
-    while (guard--) { const ev = evaluateProposal(p, o, S.settings); const f = ev.flags.find(x => x.fix && !["focus", "org"].includes(x.fix.type)); if (!f) break; applyPFix(p, o, { type: f.fix.type, line: f.line, event: f.event, ids: f.fix.ids, value: f.fix.value }); n++; }
+    while (guard--) { const ev = evaluateProposal(p, o, S.settings); const f = ev.flags.find(x => x.fix && !["focus", "org", "quote"].includes(x.fix.type)); if (!f) break; applyPFix(p, o, { type: f.fix.type, line: f.line, event: f.event, ids: f.fix.ids, value: f.fix.value }); n++; }
     save(); render(); const ev = evaluateProposal(p, o, S.settings); toast(`${n} fix${n === 1 ? "" : "es"} applied${ev.flags.length ? ` · ${ev.flags.length} left that need you` : " · ready to submit"}`); },
   submitProposal: () => { const p = proposalFor(S.orgId); const o = ORG(); const ev = evaluateProposal(p, o, S.settings);
     if (ev.flags.some(f => f.level === "deny")) { toast(`ASG would deny this: ${ev.flags.filter(f => f.level === "deny").length} item${ev.flags.filter(f => f.level === "deny").length > 1 ? "s" : ""} still fail. Fix them first.`, "bad"); return; }
@@ -700,7 +700,7 @@ function viewMeeting() {
   const removed = b ? b.changes.filter(c => c.kind === "removed" || c.kind === "capped" || c.kind === "dropped") : [];
   let right = "";
   if (!b && m.stage !== "building") right = `<section class="card"><h2>What FundPath does with your meeting</h2><ol class="howto"><li><b>Listens</b> to your exec board (live mic, or ElevenLabs transcription).</li><li><b>Builds the ASG budget</b>: events, line items, categories, amounts, quotes you mention.</li><li><b>Applies every ASG rule</b> for Tier ${TIER_ROMAN[o.tier]}: takes out what ASG won't fund and caps anything over a limit.</li><li><b>Asks you to approve</b>, out loud. Say “yes”.</li><li><b>Submits</b> the ASG proposal sheet and form, gets the rules decision, and creates your Workday Spend Authorization.</li></ol></section>`;
-  if (m.stage === "building") right = `<section class="card"><h2>Building your budget…</h2><div class="typing"><i></i><i></i><i></i></div><p class="muted small">Pulling events from Miami Central, matching categories, checking SR §11 and §19 limits.</p></section>`;
+  if (m.stage === "building") right = `<section class="card"><h2>Building your budget…</h2><div class="typing"><i></i><i></i><i></i></div><p class="muted small">Reading the events in your workspace, matching categories, checking SR §11 and §19 limits.</p></section>`;
   if (b) right = `
     <section class="card ai-card ${m.stage === "confirm" ? "ask" : ""}"><div class="ai-h"><span class="ai-dot"></span><b>FundPath assistant</b>${chip(b.ev.auto ? "approved" : "review", b.ev.auto ? `${b.ev.passed}/7 · auto-approvable` : `${b.ev.passed}/7 · needs review`)}</div>
       <p class="ai-say">${esc(m.say || "")}</p>
