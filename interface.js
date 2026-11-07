@@ -5,6 +5,7 @@ for (const role of Object.keys(NAV)) NAV[role].push(['connections', 'Campus & vo
 const friendlyLabels = { home: 'Overview', meeting: 'Meeting', proposal: 'Funding proposal', spend: 'Spending requests', card: 'Cards & receipts', balances: 'Balances', review: 'Proposal queue', apportal: 'Spending queue', advq: 'Advisor queue' };
 for (const nav of Object.values(NAV)) nav.forEach(item => { if (friendlyLabels[item[0]]) item[1] = friendlyLabels[item[0]]; });
 const connectionState = { loading: false, error: '', config: null, groups: [], directoryBusy: false, directoryError: '', checkedAt: '', query: 'Banking' };
+function configuredAgentId() { return S.settings.demoAgentId ?? DEFAULT_MEETING_AGENT_ID; }
 function campusDirectoryUrl(query) { return 'https://miamicentral.miamioh.edu/club_signup?view=all&search=' + encodeURIComponent(query || ''); }
 function roleQueue(role) {
   return role === 'asg' ? S.proposals.filter(p => p.status === 'review') : S.spend.filter(s => s.status === (role === 'advisor' ? 'advisor' : 'review'));
@@ -65,7 +66,7 @@ async function refreshDirectory() {
   finally { connectionState.directoryBusy = false; render(); }
 }
 function voiceConnectionCard() {
-  const id = S.settings.demoAgentId || '', status = liveConversation ? 'Connected' : conversationStarting ? 'Connecting' : id ? 'Ready to connect' : 'Agent identifier needed';
+  const id = configuredAgentId(), status = liveConversation ? 'Connected' : conversationStarting ? 'Connecting' : id ? 'Ready to connect' : 'Agent identifier needed';
   return `<section class="card connection-card"><div class="section-heading"><div><p class="eyebrow">ElevenLabs</p><h2>Let your meeting become the first draft</h2></div><span class="connection-status ${liveConversation?'connected':''}" role="status">${esc(status)}</span></div><p>Connect your public conversational agent. Your discussion feeds the meeting transcript and budget draft.</p><label for="savedAgentId">Public agent identifier</label><div class="connection-entry"><input id="savedAgentId" value="${esc(id)}" placeholder="agent_…" autocomplete="off"><button class="btn ghost" data-a="saveAgentId">Save agent</button></div><p class="small muted">Find it in ElevenLabs → Agents → your agent. Keep API keys in Vercel, never in this field.</p><label class="check"><input type="checkbox" data-a="enableLiveElevenLabs" ${liveElevenLabsEnabled?'checked':''}> Allow live ElevenLabs for this session. It may use billable credits.</label><p class="small muted">Your subscription and remaining credits have not been verified. Live use starts only when you press Connect.</p><div class="inline-actions"><button class="btn" data-a="connectSavedAgent" ${!id || !liveElevenLabsEnabled || liveConversation || conversationStarting?'disabled':''}>${conversationStarting?'Connecting…':'Connect agent'}</button><button class="btn ghost" data-a="stopAgent" ${!liveConversation && !conversationStarting?'disabled':''}>Disconnect</button>${actionButton('Open meeting','meeting',true)}</div>${UI.voiceError?`<p class="inline-error" role="alert">${esc(UI.voiceError)}</p>`:''}</section>`;
 }
 VIEWS.connections = () => pageIntro('Campus & voice', 'Connect the tools you already use', 'Public campus information and an optional live meeting agent. Your funding decisions stay in FundPath.')
@@ -77,7 +78,7 @@ A.saveAgentId = () => {
   if (id && !/^agent_[a-zA-Z0-9_-]+$/.test(id)) return toast('Enter a public agent ID beginning with agent_. Never enter an API key.','bad');
   S.settings.demoAgentId = id; save(); UI.voiceError = ''; render(); toast(id?'Agent saved. Live use is still your choice.':'Agent removed.');
 };
-A.connectSavedAgent = () => A.startAgent({ agentId: S.settings.demoAgentId });
+A.connectSavedAgent = () => A.startAgent({ agentId: configuredAgentId() });
 A.refreshConnections = loadConnectionStatus;
 const goWithConnections = A.go;
 A.go = d => { goWithConnections(d); if (d.id === 'connections' && !connectionState.config && !connectionState.error) loadConnectionStatus(); };
