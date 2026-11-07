@@ -2,7 +2,7 @@
 module.exports = async (req, res) => {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Use a read-only request.' });
   res.setHeader('Cache-Control', 'no-store');
-  const agentId = process.env.ELEVENLABS_AGENT_ID || '';
+  const agentId = process.env.ELEVENLABS_AGENT_ID || require('../public-config.js').agentId;
   return res.status(200).json({
     agentId: /^agent_[a-zA-Z0-9_-]+$/.test(agentId) ? agentId : '',
     speechConfigured: Boolean(process.env.ELEVENLABS_API_KEY),
