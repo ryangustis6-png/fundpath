@@ -361,15 +361,15 @@ Object.assign(A, {
 // Real club workspace
 // ---------------------------------------------------------------------------
 function renderSetupShell() {
-  $("#app").innerHTML = `<header class="site-head"><div class="utility"><div class="wrap"><nav class="ut-links"><a href="https://miamicentral.miamioh.edu" target="_blank" rel="noopener">Miami Central</a><a href="https://miamiohasg.com/funding-1" target="_blank" rel="noopener">ASG Funding</a></nav><div class="ut-right"><button class="ut-btn" data-a="modeMenu">My club data</button></div></div></div><div class="mainbar"><div class="wrap"><a class="brand2"><span class="mark">F</span><span class="word"><b>FundPath</b><small>Student Organization Funding</small></span></a></div></div></header>
-  <main id="main" class="wrap">${viewSetup()}</main>${siteFooter()}${UI.modal ? `<div class="scrim" data-a="closeModal"></div><div class="modal">${UI.modal()}</div>` : ""}`;
+  $("#app").innerHTML = `<header class="hdr"><div class="hdr-in"><a class="brand2"><span class="mark">F</span><span class="word"><b>FundPath</b><small>Student Organization Funding</small></span></a><div class="hdr-r"><button class="hdr-btn" data-a="modeMenu">My club data</button></div></div></header>
+  <main id="main" class="pg solo">${viewSetup()}</main>${siteFooter()}${UI.modal ? `<div class="scrim" data-a="closeModal"></div><div class="modal">${UI.modal()}</div>` : ""}`;
 }
 function viewSetup() {
   const f = (k, l, ph = "", type = "text") => `<label>${l}<input name="${k}" type="${type}" placeholder="${esc(ph)}"></label>`;
   return `<header class="ph"><div><p class="eyebrow">My club data</p><h1>Set up your organization</h1><p>Use your real club. Nothing here is demo data. Copy these from Miami Central (your group's About page and roster) and the ASG Funding Committee's tier list.</p></div></header>
   <form class="card" data-a2="setup"><h2>Organization</h2>
     <div class="grid2">${f("name", "Organization name (exactly as on Miami Central)", "Miami University Banking Club")}${f("entityEmail", "Entity email", "club@miamioh.edu", "email")}</div>
-    <div class="grid4"><label>Red Brick Rewards tier<select name="tier">${[1, 2, 3, 4].map(n => `<option value="${n}" ${n === 4 ? "selected" : ""}>Tier ${TIER_ROMAN[n]} · ${money(S.settings.tierMax[n])}</option>`).join("")}</select></label>${f("worktag", "Workday worktag (SA1####)", "SA10482")}${f("agencyBalance", "Agency account balance", "0", "number")}${f("prior", "ASG funds already received this semester", "0", "number")}</div>
+    <div class="grid4"><label>Red Brick Rewards tier<select name="tier">${[1, 2, 3, 4].map(n => `<option value="${n}" ${n === 4 ? "selected" : ""}>Tier ${TIER_ROMAN[n]} · ${money(S.settings.tierMax[n])}</option>`).join("")}</select></label>${f("worktag", "Workday worktag (SA1####)", "SA1####")}${f("agencyBalance", "Agency account balance", "0", "number")}${f("prior", "ASG funds already received this semester", "0", "number")}</div>
     <h2>Officers</h2><div class="grid4">${f("president", "President")}${f("presidentEmail", "President email", "", "email")}${f("treasurer", "Treasurer (you)")}${f("treasurerEmail", "Treasurer email", "", "email")}</div><div class="grid2">${f("advisor", "Advisor")}<label class="check"><input type="checkbox" name="access" checked> I've finished the SEA treasurer training and have Workday access</label></div>
     <h2>Mission and events</h2><label>Constitution purpose<textarea name="mission" rows="2" placeholder="prepare Miami students for careers in finance through…"></textarea></label>
     <label>Events registered on Miami Central (one per line, exact names)<textarea name="hub" id="hubTa" rows="4" placeholder="Speaker Meetings&#10;Valuation Workshop"></textarea></label>
@@ -439,10 +439,8 @@ const _render = render;
 render = function () {
   _render();
   if (S.mode !== "demo" || UI.hidePresenter) return;
-  const tb = document.querySelector(".gband") || document.querySelector(".site-head"); if (!tb) return;
-  const el = document.createElement("div"); el.className = "presenter";
-  el.innerHTML = `<div class="wrap pr-in"><b>Demo</b><ol>${demoBeats().map((x, i) => `<li class="${x.done ? "done" : x.on ? "on" : ""}">${i + 1}. ${esc(x.n)}</li>`).join("")}</ol><button data-a="demoRestart">Restart demo</button><button data-a="demoHide" style="margin-left:0">Hide</button></div>`;
-  tb.after(el);
+  const host = document.getElementById("sideDemo"); if (!host) return;
+  host.innerHTML = `<div class="sdemo"><h5>Demo guide</h5><ol>${demoBeats().map((x, i) => `<li class="${x.done ? "done" : x.on ? "on" : ""}">${esc(x.n)}</li>`).join("")}</ol><div class="sdemo-b"><button class="link" data-a="demoRestart">Restart demo</button><button class="link" data-a="demoHide">Hide</button></div></div>`;
 };
 Object.assign(A, {
   demoRestart: () => { S = seedState(); S.mode = "demo"; UI = { view: "meeting", modal: null, threadId: null, busy: false, saId: null }; VOICE.playing = false; DOCK.log = []; save(); location.hash = "meeting"; render(); window.scrollTo(0, 0); toast("Demo reset. Start the meeting when you're ready."); },

@@ -28,27 +28,17 @@ const chip = (s, label) => `<span class="chip ${CHIP[s] || "gray"}">${esc(label 
 const lvl = l => l === "deny" ? `<span class="lv deny">Fails</span>` : l === "warn" ? `<span class="lv warn">Check</span>` : `<span class="lv ok">Pass</span>`;
 const ruleTag = id => { const r = RULES[id]; if (!r) return ""; return `<button class="rtag ${r.kind}" data-a="showRule" data-id="${id}">${esc(r.title)}<i>${r.kind}</i></button>`; };
 
-const TOP_ONLY = ["help", "resources", "rules"];
-function siteHeader(role, o) {
-  const roleSel = `<label class="ut-sel">Viewing as <select data-a2="pickRole">${[["treasurer", "Treasurer"], ["advisor", "Advisor"], ["asg", "ASG / Accounts Payable"]].map(([r, l]) => `<option value="${r}" ${role === r ? "selected" : ""}>${l}</option>`).join("")}</select></label>`;
-  return `<header class="site-head">
-    <div class="utility"><div class="wrap">
-      <nav class="ut-links"><a href="https://miamicentral.miamioh.edu" target="_blank" rel="noopener">Miami Central</a><a href="https://miamiohasg.com/funding-1" target="_blank" rel="noopener">ASG Funding</a><a href="https://miamioh.instructure.com/courses/225476" target="_blank" rel="noopener">Treasurer Training</a><a href="https://www.myworkday.com/miamioh" target="_blank" rel="noopener">Workday</a></nav>
-      <div class="ut-right"><input class="ut-search" placeholder="Search or ask FundPath" data-a2="search" aria-label="Search or ask FundPath">${roleSel}<button class="ut-btn" data-a="modeMenu">${S.mode === "real" ? "My club data" : "Demo data"}</button></div>
-    </div></div>
-    <div class="mainbar"><div class="wrap">
-      <a class="brand2" href="#${NAV[role][0][0]}"><span class="mark">F</span><span class="word"><b>FundPath</b><small>Student Organization Funding</small></span></a>
-      <nav class="mainnav">${(role === "treasurer" ? [[NAV[role][0][0], "Funding", !TOP_ONLY.includes(UI.view)], ["help", "Funding Help"], ["resources", "Resources"], ["rules", "Rules"]] : role === "asg" ? [["sareview", "Review"], ["inbox", "Liaison Inbox"], ["oversight", "Organizations"], ["rules", "Rules and Settings"]] : [["advq", "Approvals"], ["rules", "Rules"]]).map(([v, l, on]) => `<a href="#${v}" class="${on || UI.view === v ? "on" : ""}">${l}</a>`).join("")}
-        ${role === "treasurer" ? `<a class="cta" href="#meeting">Start an Exec Meeting</a>` : ""}</nav>
-    </div></div>
-  </header>`;
-}
+const NAV_GROUPS = {
+  treasurer: [["Start here", ["home", "meeting", "upload"]], ["Funding", ["proposal", "rules"]], ["Spending", ["spend", "card", "deposits", "workday"]], ["Help", ["help", "resources", "org"]]],
+  asg: [["Review", ["sareview", "review"]], ["Manage", ["inbox", "oversight", "workday", "rules"]]],
+  advisor: [["Review", ["advq"]], ["Reference", ["rules"]]]
+};
+const SHORT = { proposal: "ASG proposal", sareview: "Spend review", rules: "Rules and limits" };
 function siteFooter() {
-  return `<footer class="site-foot"><div class="wrap">
+  return `<footer class="site-foot"><div class="sf-in">
     <div class="sf-cols">
       <div><b class="sf-brand">FundPath</b><p>ASG funding and student organization spending for Miami University, in one place.</p></div>
-      <div><h4>Funding</h4><a href="#meeting">Exec meeting</a><a href="#proposal">ASG proposal</a><a href="#upload">Upload a budget</a><a href="#rules">Limits and rules</a></div>
-      <div><h4>Spending</h4><a href="#spend">Spend Authorization</a><a href="#card">Card and receipts</a><a href="#deposits">Deposits</a><a href="#workday">Workday</a></div>
+      <div><h4>Links</h4><a href="https://miamicentral.miamioh.edu" target="_blank" rel="noopener">Miami Central</a><a href="https://miamiohasg.com/funding-1" target="_blank" rel="noopener">ASG Funding</a><a href="https://miamioh.edu/workday" target="_blank" rel="noopener">Workday</a><a href="https://miamioh.instructure.com/courses/225476" target="_blank" rel="noopener">Treasurer training (Canvas)</a></div>
       <div><h4>Contact</h4><p>ASG Funding Committee<br>asgfunding@miamioh.edu</p><p>Accounts Payable<br>107 Roudebush Hall, Oxford, OH 45056</p></div>
     </div>
     <div class="sf-legal"><span>Rules sourced from the ASG Funding Committee Standing Rules 2025–2026, the ASG Club Funding Proposal and SEA Student Org Finance Training.</span><span>Student-built for Redhawk Builds 2026. Not an official Miami University website.</span></div>
@@ -67,22 +57,28 @@ function render() {
     if (v === "review") n = S.proposals.filter(p => p.status === "review").length;
     if (v === "sareview") n = S.spend.filter(s => s.status === "review").length;
     if (v === "inbox") n = S.threads.filter(t => t.status === "open").length;
-    return n ? ` <b class="nb">${n}</b>` : "";
+    return n ? `<b class="nb">${n}</b>` : "";
   };
+  const label = v => SHORT[v] || (nav.find(n => n[0] === v) || ["", v])[1];
   const initials = x => String(x || "?").replace(/^Miami University /, "").split(/\s+/).filter(w => /^[A-Z]/.test(w)).slice(0, 2).map(w => w[0]).join("") || "?";
-  const tabs = nav.filter(([v]) => !(role === "treasurer" && TOP_ONLY.includes(v)));
-  const pageLabel = (nav.find(n => n[0] === UI.view) || ["", ""])[1];
-  const groupName = role === "treasurer" ? o.name : role === "asg" ? "ASG Funding Committee and Accounts Payable" : "Organization Advisors";
-  const band = `<section class="gband"><div class="wrap">
-      <div class="crumbs"><a href="https://miamicentral.miamioh.edu" target="_blank" rel="noopener">Miami Central</a><span>›</span>${esc(groupName || "")}<span>›</span>${esc(pageLabel)}</div>
-      <div class="g-row"><div class="g-logo ${role !== "treasurer" ? "alt" : ""}">${role === "treasurer" ? esc(initials(o.name)) : role === "asg" ? "ASG" : "ADV"}</div>
-        <div class="g-id">${role === "treasurer" && S.orgs.length > 1 ? `<select data-a2="pickOrg" class="g-sel" aria-label="Organization">${S.orgs.map(x => `<option value="${x.id}" ${x.id === o.id ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select>` : `<h2 class="g-name">${esc(groupName || "")}</h2>`}
-          <p>${role === "treasurer" ? `Tier ${TIER_ROMAN[o.tier] || "?"} · ${money(S.settings.tierMax[o.tier] || 0)} per semester · Worktag ${esc(o.worktag || "")} · Treasurer ${esc(o.treasurer || "")} · Advisor ${esc(o.advisor || "")}` : `${S.orgs.length} student organizations · ${esc(S.settings.semester)} ${esc(S.settings.cycle || "")}`}</p></div>
-        <div class="g-term"><span>${esc(S.settings.semester)} ${esc(S.settings.cycle || "")}</span><b>Proposals close ${fmtD(S.settings.window.close)}</b></div></div>
-      <nav class="gtabs">${tabs.map(([v, l]) => `<a href="#${v}" class="${UI.view === v ? "on" : ""}">${l}${badge(v)}</a>`).join("")}</nav>
-    </div></section>`;
-  $("#app").innerHTML = `${siteHeader(role, o)}${band}
-  <main id="main" class="wrap">${role === "treasurer" && o.id ? cardReadyBanner(o) : ""}${VIEWS[UI.view]()}</main>
+  const who = role === "treasurer"
+    ? `<div class="who"><div class="who-logo">${esc(initials(o.name))}</div><div class="who-t"><b>${esc(o.name)}</b><span>Tier ${TIER_ROMAN[o.tier] || "?"} · ${esc(o.worktag || "")}</span><span>Advisor: ${esc(o.advisor || "not set")} · <a href="#org">Edit</a></span>${S.orgs.length > 1 ? `<label class="who-sw">Switch organization<select data-a2="pickOrg">${S.orgs.map(x => `<option value="${x.id}" ${x.id === o.id ? "selected" : ""}>${esc(x.name.replace(/^Miami University /, ""))}</option>`).join("")}</select></label>` : ""}</div></div>`
+    : `<div class="who"><div class="who-logo alt">${role === "asg" ? "ASG" : "ADV"}</div><div class="who-t"><b>${role === "asg" ? "ASG Funding + Accounts Payable" : "Organization advisors"}</b><span>${S.orgs.length} organizations</span></div></div>`;
+  const groups = NAV_GROUPS[role].map(([g, vs]) => `<div class="sg"><h5>${g}</h5>${vs.filter(v => nav.some(n => n[0] === v)).map(v => `<a href="#${v}" class="${UI.view === v ? "on" : ""}"><span>${esc(label(v))}</span>${badge(v)}</a>`).join("")}</div>`).join("");
+  $("#app").innerHTML = `
+  <header class="hdr"><div class="hdr-in">
+    <a class="brand2" href="#${nav[0][0]}"><span class="mark">F</span><span class="word"><b>FundPath</b><small>Student Organization Funding</small></span></a>
+    <div class="hdr-r"><span class="hdr-l">Viewing as</span><div class="seg2">${[["treasurer", "Treasurer"], ["advisor", "Advisor"], ["asg", "ASG / AP"]].map(([r, l]) => `<button class="${role === r ? "on" : ""}" data-a="role" data-r="${r}">${l}</button>`).join("")}</div>
+      <button class="hdr-btn" data-a="modeMenu">${S.mode === "real" ? "My club data" : "Demo data"}</button></div>
+  </div></header>
+  <div class="lay">
+    <aside class="snav">${who}<nav class="sgs">${groups}</nav><div id="sideDemo"></div></aside>
+    <main id="main" class="pg">
+      <div class="crumbs">${role === "treasurer" ? esc(o.name || "") : role === "asg" ? "ASG Funding Committee" : "Advisors"} <span>›</span> ${esc(label(UI.view))}</div>
+      ${S.mode === "demo" && role === "treasurer" ? `<p class="demo-note">Demo data: officers, numbers and approvals are examples, not pulled from Miami Central or Workday.</p>` : ""}
+      ${role === "treasurer" && o.id ? cardReadyBanner(o) : ""}${VIEWS[UI.view]()}
+    </main>
+  </div>
   ${siteFooter()}
   ${voiceDock()}
   ${UI.modal ? `<div class="scrim" data-a="closeModal"></div><div class="modal">${UI.modal()}</div>` : ""}`;
@@ -96,7 +92,7 @@ function readinessHtml(o) {
     ["Workday access module (annual)", r.module ? `Completed ${fmtD(r.moduleDate)}` : "Not completed", !!r.module, "Canvas"],
     ["Workday access request", r.access === "approved" ? "Approved by SEA" : r.access === "pending" ? "Waiting on SEA review" : "Not submitted", r.access === "approved", "TeamDynamix"]
   ];
-  return `<div class="ready">${items.map(([t, v, ok, src]) => `<div class="ri ${ok ? "ok" : "no"}"><i>${ok ? "✓" : "!"}</i><div><b>${t}</b><span>${v}</span><small>from ${src}</small></div></div>`).join("")}</div>`;
+  return `<div class="ready">${items.map(([t, v, ok, src]) => `<div class="ri ${ok ? "ok" : "no"}"><i>${ok ? "✓" : "!"}</i><div><b>${t}</b><span>${v}</span><small>checked in ${src}</small></div></div>`).join("")}</div>`;
 }
 function viewHome() {
   const o = ORG(), led = ledgerFor(S, o.id), p = proposalFor(o.id);
@@ -130,7 +126,7 @@ function viewHome() {
     <div class="pipe">${steps.map((s, i) => `<div class="stage ${s.done ? "done" : s.now ? "now" : ""}"><i>${s.done ? "✓" : i + 1}</i><b>${s.t}</b><span>${esc(s.s)}</span><small>${s.done ? "" : "With: " + esc(s.who)}</small></div>`).join("")}</div></section>
   <div class="split2">
     <section class="card"><h2>Needs your attention</h2>${tasks.length ? `<ul class="todo">${tasks.map(t => `<li class="${t.sev}"><p>${esc(t.title)} ${ruleTag(t.rule)}</p><button class="btn sm" data-a="go" data-id="${t.go}">Open</button></li>`).join("")}</ul>` : `<p class="muted">You're all caught up.</p>`}</section>
-    <section class="card"><h2>Eligibility <small class="muted">pulled automatically</small></h2>${readinessHtml(o)}</section>
+    <section class="card"><h2>Eligibility <small class="muted">what ASG checks before funding</small></h2>${readinessHtml(o)}</section>
   </div>
   <section class="card"><h2>Recent activity</h2>${S.log.filter(l => l.orgId === o.id || !l.orgId).length ? `<ul class="log">${S.log.filter(l => l.orgId === o.id || !l.orgId).slice(0, 8).map(l => `<li><time>${new Date(l.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</time>${esc(l.text)}</li>`).join("")}</ul>` : `<p class="muted">Actions you take show up here.</p>`}</section>`;
 }

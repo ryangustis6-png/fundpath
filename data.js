@@ -34,7 +34,7 @@ function seedState() {
   return {
     v: 5, role: "treasurer", orgId: "o1", settings: S,
     orgs: [
-      org("o1", "Miami University Banking Club", "mubankingclub@miamioh.edu", 4, "SA10482", ["Alex R.", "alexr@miamioh.edu"], ["Ryan G.", "ryang@miamioh.edu"], "Dr. M. Alvarez",
+      org("o1", "Miami University Banking Club", "mucbc@miamioh.edu", 4, "SA10472", ["Alex R.", "alexr@miamioh.edu"], ["Ryan G.", "ryang@miamioh.edu"], "Xi Lu",
         ["Speaker Meetings", "Valuation Workshop", "Club Socials", "Club Meeting"], "prepare Miami students for careers in investment banking and finance through speakers, technical training and networking", { agencyBalance: 640 }),
       org("o2", "Miami Robotics Society", "robotics@miamioh.edu", 3, "SA10311", ["Avery Kim", "kimav@miamioh.edu"], ["Sam Ortiz", "ortizs@miamioh.edu"], "Dr. L. Chen", ["Regional Robotics Showcase"], "build hands-on engineering skills through robotics design and competition"),
       org("o3", "Oxford Food Recovery Network", "foodrecovery@miamioh.edu", 2, "SA10577", ["Riley Brooks", "brooksr@miamioh.edu"], ["Dana Lee", "leed@miamioh.edu"], "Prof. K. Owens", ["Campus Food Waste Teach-in"], "reduce campus food waste and educate students on food insecurity"),
