@@ -1,8 +1,8 @@
 // FundPath UI
-const KEY = "fundpath-v4";
+const KEY = "fundpath-v5";
 let S;
 let UI = { view: "home", modal: null, threadId: null, busy: false, saId: null, open: null, confirmSubmit: false };
-function load() { try { const raw = localStorage.getItem(KEY); if (raw) { const s = JSON.parse(raw); if (s.v === 4) { S = s; return; } } } catch (e) {} S = seedState(); }
+function load() { try { const raw = localStorage.getItem(KEY); if (raw) { const s = JSON.parse(raw); if (s.v === 5) { S = s; return; } } } catch (e) {} S = seedState(); }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const $ = s => document.querySelector(s);
@@ -12,12 +12,13 @@ const nextId = (p, arr) => { const n = arr.filter(x => String(x.id).startsWith(p
 const uid = () => Math.random().toString(36).slice(2, 7);
 function toast(msg, kind = "ok") { document.querySelectorAll(".toast").forEach(x => x.remove()); const t = document.createElement("div"); t.className = `toast ${kind}`; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3400); }
 function logEvt(orgId, text) { S.log.unshift({ at: new Date().toISOString(), orgId, text }); S.log = S.log.slice(0, 80); }
+const isEv = cat => !!(CATS[cat] && (CATS[cat].sec === "event" || CATS[cat].sec === "trip"));
 const proposalFor = orgId => S.proposals.find(p => p.orgId === orgId && p.semester === S.settings.semester);
 
 const NAV = {
-  treasurer: [["home", "Dashboard"], ["proposal", "ASG proposal (budget)"], ["spend", "Spend Authorization"], ["card", "Card & receipts"], ["deposits", "Deposits"], ["help", "Funding Help"], ["resources", "Resources"], ["org", "Org & eligibility"], ["rules", "Rules"]],
+  treasurer: [["home", "Dashboard"], ["meeting", "Exec meeting · voice"], ["proposal", "ASG proposal (budget)"], ["spend", "Spend Authorization"], ["card", "Card & receipts"], ["deposits", "Deposits"], ["help", "Funding Help"], ["resources", "Resources"], ["workday", "Workday"], ["org", "Org & eligibility"], ["rules", "Rules"]],
   advisor: [["advq", "Advisor approvals"], ["rules", "Rules"]],
-  asg: [["review", "Proposal review"], ["sareview", "Spend review (2nd line)"], ["inbox", "Liaison inbox"], ["oversight", "Org oversight"], ["rules", "Rules & settings"]]
+  asg: [["sareview", "Spend review (2nd line)"], ["review", "Proposal review"], ["workday", "Workday sync"], ["inbox", "Liaison inbox"], ["oversight", "Org oversight"], ["rules", "Rules & settings"]]
 };
 const CHIP = { draft: "gray", submitted: "blue", review: "blue", advisor: "amber", approved: "green", pickup: "green", active: "green", closed: "gray", returned: "red", denied: "red", open: "amber", answered: "green", ai: "gray" };
 const LABEL = { review: "In review", advisor: "With advisor", approved: "Approved", pickup: "Card ready", active: "Card active", closed: "Closed", returned: "Returned", draft: "Draft", denied: "Denied" };
@@ -31,7 +32,7 @@ function render() {
   const o = ORG();
   const badge = v => {
     let n = 0, cls = "";
-    if (v === "card") n = S.txns.filter(t => t.orgId === o.id && !t.receiptDone).length, cls = "amber";
+    if (v === "card") n = S.txns.filter(t => t.orgId === o.id && !t.receiptDone).length + S.spend.filter(x => x.orgId === o.id && x.kind === "SA" && x.status === "approved").length, cls = "amber";
     if (v === "deposits") n = S.deposits.filter(d => d.orgId === o.id && evaluateDeposit(d).level === "deny").length, cls = "red";
     if (v === "help") n = S.threads.filter(t => t.orgId === o.id && t.unread).length;
     if (v === "advq") n = S.spend.filter(s => s.status === "advisor").length;
@@ -42,7 +43,7 @@ function render() {
   };
   $("#app").innerHTML = `
   <aside class="side">
-    <div class="brand"><div class="logo">F</div><div><b>FundPath</b><small>Miami ASG funding, one place</small></div></div>
+    <div class="brand"><div class="logo">F</div><div><b>FundPath</b><small>for Miami Central · ASG funding</small></div></div>
     <div class="role three">
       <button class="${role === "treasurer" ? "on" : ""}" data-a="role" data-r="treasurer">Treasurer</button>
       <button class="${role === "advisor" ? "on" : ""}" data-a="role" data-r="advisor">Advisor</button>
@@ -53,7 +54,7 @@ function render() {
     <nav>${nav.map(([v, l]) => `<a href="#${v}" class="${UI.view === v ? "on" : ""}">${l}${badge(v)}</a>`).join("")}</nav>
     <div class="sidefoot"><button class="link" data-a="reset">Reset demo data</button><small>${esc(S.settings.semester)} · proposals close ${fmtD(S.settings.window.close)}</small></div>
   </aside>
-  <main id="main">${VIEWS[UI.view]()}</main>
+  <main id="main">${role === "treasurer" ? cardReadyBanner(o) : ""}${VIEWS[UI.view]()}</main>
   ${UI.modal ? `<div class="scrim" data-a="closeModal"></div><div class="modal">${UI.modal()}</div>` : ""}`;
 }
 
@@ -113,7 +114,7 @@ function viewProposal() {
   const ro = !["draft", "returned"].includes(p.status) || S.role !== "treasurer";
   const dis = ro ? "disabled" : "";
   const evOpts = sel => `<option value="">—</option>` + p.events.map(e => `<option value="${e.id}" ${e.id === sel ? "selected" : ""}>${esc(e.name)}</option>`).join("");
-  const catOpts = (sel, kind) => Object.keys(CATS).filter(k => kind === "event" ? (CATS[k].event || CATS[k].trip) : !(CATS[k].event || CATS[k].trip)).map(k => `<option ${k === sel ? "selected" : ""}>${k}</option>`).join("");
+  const catOpts = (sel, kind) => Object.keys(CATS).filter(k => kind === "event" ? isEv(k) : !isEv(k)).map(k => `<option ${k === sel ? "selected" : ""}>${k}</option>`).join("");
   const lineRow = (l, kind) => `<tr class="lvl-${ev.lineLevel[l.id] || "ok"}" id="row-${l.id}">
     ${kind === "event" ? `<td><select data-f="ln:${l.id}:eventId" ${dis}>${evOpts(l.eventId)}</select></td>` : ""}
     <td><input data-f="ln:${l.id}:item" id="in-${l.id}" value="${esc(l.item)}" ${dis} placeholder="Specific expense"></td>
@@ -123,14 +124,14 @@ function viewProposal() {
     <td class="c"><label class="mini"><input type="checkbox" data-f="ln:${l.id}:quote" ${l.quote ? "checked" : ""} ${dis}> quote</label></td>
     <td id="lv-${l.id}">${lvl(ev.lineLevel[l.id])}</td>
     ${ro ? "" : `<td><button class="x" data-a="delLine" data-id="${l.id}">×</button></td>`}</tr>`;
-  const eventLines = p.lines.filter(l => CATS[l.cat] && (CATS[l.cat].event || CATS[l.cat].trip));
-  const nonLines = p.lines.filter(l => !(CATS[l.cat] && (CATS[l.cat].event || CATS[l.cat].trip)));
+  const eventLines = p.lines.filter(l => isEv(l.cat));
+  const nonLines = p.lines.filter(l => !(isEv(l.cat)));
   const f1 = (label, val, okv) => `<div class="kv"><span>${label}</span><b>${esc(val || "—")}</b>${okv ? `<i class="okv">✓</i>` : `<i class="nov">!</i>`}</div>`;
   return `
   <header class="ph"><div><h1>ASG Funding Proposal · ${esc(S.settings.semester)}</h1><p>${p.id} · Your original budget. Every Spend Authorization line must match it. ${chip(p.status)} ${p.decidedBy ? `<small class="muted">by ${esc(p.decidedBy)} ${fmtD(p.decidedAt)}</small>` : ""}</p></div>
     <div class="ph-actions"><button class="btn ghost" data-a="exportSheet">Copy in ASG sheet format</button>${!ro ? `<button class="btn ghost" data-a="importCsv">Import from Google Sheet</button>` : ""}${p.status === "approved" && S.role === "treasurer" ? `<button class="btn" data-a="genSA">Generate Spend Authorization →</button>` : ""}</div></header>
   ${p.status === "returned" ? `<div class="banner bad"><b>Returned by the ASG Funding Committee:</b> ${esc(p.notes || "")}</div>` : ""}
-  ${p.status === "approved" ? `<div class="banner good"><b>Approved${p.decidedBy === "FundPath auto-approval" ? " automatically: all 7 committee criteria passed" : " by the ASG Funding Committee"}.</b> ${money(ev.total)} is now in your ASG account (FD1000 / PRG040). Generate the Spend Authorization from this budget so you don't type it all again.</div>` : ""}
+  ${p.status === "approved" ? `<div class="banner good"><b>Approved${p.decidedBy === "FundPath auto-approval" ? " automatically: all 7 committee criteria passed" : " by the ASG Funding Committee"}.</b> <small>Committee decisions are recommendations ratified by Senate (SR §3.1).</small> ${money(ev.total)} is now in your ASG account (FD1000 / PRG040). Generate the Spend Authorization from this budget so you don't type it all again.</div>` : ""}
   ${p.status === "review" ? `<div class="banner info"><b>With the ASG Funding Committee.</b> FundPath flagged items that need a human decision. Expect a reply within 10 academic days, and you'll see it here.</div>` : ""}
   <div class="split">
     <div>
@@ -139,14 +140,14 @@ function viewProposal() {
         <label class="inline">ASG funding already received this semester<input type="number" min="0" data-f="p:prior" value="${esc(p.prior)}" ${dis}></label>
         <div class="acks">${[["hub", "Events and trips are listed on the HUB"], ["itemized", "Budget is itemized into specific expenses"], ["quotes", "Quotes attached for hotels, flights and items over $1,000"], ["noGuarantee", "Eligibility doesn't guarantee approval"]].map(([k, t]) => `<label class="check"><input type="checkbox" data-f="ack:${k}" ${(p.ack || {})[k] ? "checked" : ""} ${dis}> ${t}</label>`).join("")}</div>
       </section>
-      <section class="card"><h2>Step 2 · Events and trips <small class="muted">names must exactly match the HUB</small></h2>
-        <table class="tbl items"><thead><tr><th>Type</th><th>Name (exactly as on the HUB)</th><th>Start</th><th>End</th><th class="r">Hotel ppl</th><th class="r">Nights</th><th class="r">Flight ppl</th><th>HUB</th>${ro ? "" : "<th></th>"}</tr></thead><tbody>
+      <section class="card"><h2>Step 2 · Events and trips <small class="muted">names must exactly match Miami Central (SR §6.2.1)</small></h2>
+        <table class="tbl items"><thead><tr><th>Type</th><th>Name (exactly as on Miami Central)</th><th>Start</th><th>End</th><th>Event criteria (25% each, SR §11.1)</th><th>Miami Central</th>${ro ? "" : "<th></th>"}</tr></thead><tbody>
         ${p.events.map(e => { const ok = (o.hub || []).includes(e.name); return `<tr class="lvl-${ok ? "ok" : "deny"}"><td><select data-f="ev:${e.id}:type" ${dis}><option ${e.type === "Event" ? "selected" : ""}>Event</option><option ${e.type === "Trip" ? "selected" : ""}>Trip</option></select></td>
           <td><input data-f="ev:${e.id}:name" value="${esc(e.name)}" ${dis}></td><td><input type="date" data-f="ev:${e.id}:start" value="${esc(e.start)}" ${dis}></td><td><input type="date" data-f="ev:${e.id}:end" value="${esc(e.end)}" ${dis}></td>
-          ${e.type === "Trip" ? `<td class="r"><input class="num" type="number" min="0" data-f="ev:${e.id}:hotelPeople" value="${esc(e.hotelPeople || 0)}" ${dis}></td><td class="r"><input class="num" type="number" min="0" data-f="ev:${e.id}:hotelNights" value="${esc(e.hotelNights || 0)}" ${dis}></td><td class="r"><input class="num" type="number" min="0" data-f="ev:${e.id}:flightPeople" value="${esc(e.flightPeople || 0)}" ${dis}></td>` : `<td></td><td></td><td></td>`}
-          <td>${ok ? `<span class="lv ok">On HUB</span>` : `<span class="lv deny">No match</span>`}</td>${ro ? "" : `<td><button class="x" data-a="delEvent" data-id="${e.id}">×</button></td>`}</tr>`; }).join("")}
+          <td>${e.type === "Trip" ? `<div class="crit-in"><label class="mini">Travelers<input class="num" type="number" min="0" data-f="ev:${e.id}:travelers" value="${esc(e.travelers || 0)}" ${dis}></label><label class="mini">Nights<input class="num" type="number" min="0" data-f="ev:${e.id}:nights" value="${esc(e.nights || 0)}" ${dis}></label><span class="tag">live hearing</span></div>` : `<div class="crit-in">${[["onCampus", "On campus"], ["educational", "Educational"], ["openToAll", "Open to all"], ["service", "Service"], ["lateNight", "Late night"]].map(([k, t]) => `<label class="mini"><input type="checkbox" data-f="ev:${e.id}:${k}" ${e[k] ? "checked" : ""} ${dis}> ${t}</label>`).join("")}<b class="pct">${eventPct(e, o).pct}%</b></div>`}</td>
+          <td>${ok ? `<span class="lv ok">Registered</span>` : `<span class="lv deny">No match</span>`}</td>${ro ? "" : `<td><button class="x" data-a="delEvent" data-id="${e.id}">×</button></td>`}</tr>`; }).join("")}
         </tbody></table>${ro ? "" : `<button class="btn ghost sm" data-a="addEvent">+ Add event or trip</button>`}
-        <p class="muted small">On the HUB for ${esc(o.name)}: ${(o.hub || []).map(h => `<span class="tag">${esc(h)}</span>`).join(" ")}</p>
+        <p class="muted small">On Miami Central for ${esc(o.name)}: ${(o.hub || []).map(h => `<span class="tag">${esc(h)}</span>`).join(" ")}</p>
       </section>
       <section class="card"><h2>Step 3 · Event and trip budget</h2>
         <table class="tbl items"><thead><tr><th>Event / trip</th><th>Budget item</th><th>Category</th><th class="r">Amount</th><th>Comments</th><th>Quote</th><th>Check</th>${ro ? "" : "<th></th>"}</tr></thead><tbody>${eventLines.map(l => lineRow(l, "event")).join("")}</tbody></table>
@@ -173,7 +174,7 @@ function proposalSide(p, o, ev, ro) {
     <table class="lim">${ev.limits.filter(x => x.limit > 0 || x.req > 0).map(x => `<tr class="${x.req > x.limit + 0.001 ? "over" : ""}"><td>${x.label}<small>${esc(x.note)}</small></td><td class="r mono">${money(x.req)}</td><td class="r mono muted">/ ${money(x.limit)}</td></tr>`).join("")}</table>
     <h3>Fix before you submit ${!ro && autoFix ? `<button class="btn sm" data-a="fixAllP">Fix ${autoFix} automatically</button>` : ""}</h3>
     ${ev.flags.length ? `<ul class="flags">${ev.flags.map(f => { const l = f.line ? p.lines.find(x => x.id === f.line) : null; const e = f.event ? p.events.find(x => x.id === f.event) : null;
-      return `<li class="${f.level}"><div><small>Criterion ${f.crit}${l ? " · " + esc(l.item || "line") : e ? " · " + esc(e.name) : ""}</small><p>${esc(f.msg)}</p>${ruleTag(f.rule)}</div>${!ro && f.fix ? `<button class="btn sm ghost" data-a="fixP" data-rule="${f.rule}" data-line="${f.line || ""}" data-event="${f.event || ""}" data-type="${f.fix.type}" data-group="${f.fix.group || ""}" data-value="${esc(f.fix.value ?? "")}">${esc(f.fix.label)}</button>` : ""}</li>`; }).join("")}</ul>` : `<p class="okline">Nothing to fix. This will be approved automatically.</p>`}
+      return `<li class="${f.level}"><div><small>Criterion ${f.crit}${l ? " · " + esc(l.item || "line") : e ? " · " + esc(e.name) : ""}</small><p>${esc(f.msg)}</p>${ruleTag(f.rule)}</div>${!ro && f.fix ? `<button class="btn sm ghost" data-a="fixP" data-rule="${f.rule}" data-line="${f.line || ""}" data-event="${f.event || ""}" data-type="${f.fix.type}" data-ids="${f.fix.ids || ""}" data-value="${esc(f.fix.value ?? "")}">${esc(f.fix.label)}</button>` : ""}</li>`; }).join("")}</ul>` : `<p class="okline">Nothing to fix. This will be approved automatically.</p>`}
   </section>`;
 }
 function refreshProposalSide() {
@@ -182,25 +183,9 @@ function refreshProposalSide() {
   p.lines.forEach(l => { const c = $("#lv-" + l.id); if (c) c.innerHTML = lvl(ev.lineLevel[l.id]); const r = $("#row-" + l.id); if (r) r.className = "lvl-" + (ev.lineLevel[l.id] || "ok"); });
 }
 function applyPFix(p, o, d) {
-  const l = d.line ? p.lines.find(x => x.id === d.line) : null;
-  switch (d.type) {
-    case "hubname": { const e = p.events.find(x => x.id === d.event); if (e) e.name = d.value; break; }
-    case "capGroup": {
-      if (d.group === "total") break;
-      const inG = p.lines.filter(x => CATS[x.cat] && CATS[x.cat].group === d.group);
-      let excess = cents(inG.reduce((s, x) => s + +x.amount, 0) - +d.value);
-      for (let i = inG.length - 1; i >= 0 && excess > 0; i--) { const cut = Math.min(+inG[i].amount, excess); inG[i].amount = cents(+inG[i].amount - cut); excess = cents(excess - cut); }
-      p.lines = p.lines.filter(x => +x.amount > 0 || !inG.includes(x)); break;
-    }
-    case "quote": if (l) { l.quote = true; l.quoteFile = "vendor_quote.pdf"; } break;
-    case "remove": p.lines = p.lines.filter(x => x.id !== d.line); break;
-    case "delEvent": p.events = p.events.filter(x => x.id !== d.event); p.lines.forEach(x => { if (x.eventId === d.event) x.eventId = ""; }); break;
-    case "ack": p.ack = { hub: true, itemized: true, quotes: true, noGuarantee: true }; break;
-    case "comment": if (l) { const e = p.events.find(x => x.id === l.eventId); l.comment = `${l.item} for ${e ? e.name : "our programming"}, open to all Miami students and tied to our mission`; } break;
-    case "purpose": p.purpose = `This semester's plan ${p.events.length ? `(${p.events.map(e => e.name).join(", ")}) ` : ""}is open to all Miami students and serves our constitution's purpose to ${o.mission}. Every line is itemized, matched to a HUB event, and kept inside ASG's limits.`; break;
-    case "focus": UI.focus = "in-" + d.line; break;
-    case "org": UI.view = "org"; break;
-  }
+  if (d.type === "focus") { UI.focus = "in-" + d.line; return; }
+  if (d.type === "org") { UI.view = "org"; return; }
+  applyFix(p, o, d);
 }
 
 function draftJustification(o, p, lines) {
@@ -460,7 +445,7 @@ function viewReview() {
 }
 
 function viewSAReview() {
-  const q = S.spend.filter(s => s.status === "review");
+  const q = S.spend.filter(s => s.status === "review").reverse();
   const totalSlips = q.reduce((t, s) => t + evaluateSpend(s, S).slips, 0);
   return `<header class="ph"><div><h1>Spend review · second line</h1><p>Every line is re-checked from scratch against the approved budget and the SEA purchasing rules. This is where anything that slipped through funding approval gets caught.</p></div></header>
   ${totalSlips ? `<div class="banner bad"><b>${totalSlips} item${totalSlips > 1 ? "s" : ""} slipped past funding approval</b> and ${totalSlips > 1 ? "were" : "was"} caught here because the Spend Authorization detail didn't match what the budget said.</div>` : ""}
@@ -486,7 +471,7 @@ function viewOversight() {
   </tbody></table></section>`;
 }
 
-const VIEWS = { home: viewHome, proposal: viewProposal, spend: viewSpend, card: viewCard, deposits: viewDeposits, help: viewHelp, resources: viewResources, org: viewOrg, rules: viewRules, advq: viewAdvisor, review: viewReview, sareview: viewSAReview, inbox: viewInbox, oversight: viewOversight };
+const VIEWS = { home: viewHome, proposal: viewProposal, spend: viewSpend, card: viewCard, deposits: viewDeposits, help: viewHelp, resources: viewResources, org: viewOrg, rules: viewRules, advq: viewAdvisor, meeting: viewMeeting, workday: viewWorkday, review: viewReview, sareview: viewSAReview, inbox: viewInbox, oversight: viewOversight };
 
 function genSAFor(orgId) {
   const o = orgById(orgId); const p = approvedProposal(S, orgId); const led = ledgerFor(S, orgId);
@@ -517,16 +502,16 @@ const A = {
   delLine: d => { const p = proposalFor(S.orgId); p.lines = p.lines.filter(l => l.id !== d.id); save(); render(); },
   fixP: d => { const p = proposalFor(S.orgId); applyPFix(p, ORG(), d); save(); render(); if (UI.focus) { const el = document.getElementById(UI.focus); UI.focus = null; if (el) { el.focus(); el.select(); } } else toast("Fixed"); },
   fixAllP: () => { const p = proposalFor(S.orgId); const o = ORG(); let n = 0, guard = 60;
-    while (guard--) { const ev = evaluateProposal(p, o, S.settings); const f = ev.flags.find(x => x.fix && !["focus", "org"].includes(x.fix.type) && !(x.fix.type === "capGroup" && x.fix.group === "total")); if (!f) break; applyPFix(p, o, { type: f.fix.type, line: f.line, event: f.event, group: f.fix.group, value: f.fix.value }); n++; }
+    while (guard--) { const ev = evaluateProposal(p, o, S.settings); const f = ev.flags.find(x => x.fix && !["focus", "org"].includes(x.fix.type)); if (!f) break; applyPFix(p, o, { type: f.fix.type, line: f.line, event: f.event, ids: f.fix.ids, value: f.fix.value }); n++; }
     save(); render(); const ev = evaluateProposal(p, o, S.settings); toast(`${n} fix${n === 1 ? "" : "es"} applied${ev.flags.length ? ` · ${ev.flags.length} left that need you` : " · ready to submit"}`); },
   submitProposal: () => { const p = proposalFor(S.orgId); const o = ORG(); const ev = evaluateProposal(p, o, S.settings);
     if (ev.flags.some(f => f.level === "deny")) { toast(`ASG would deny this: ${ev.flags.filter(f => f.level === "deny").length} item${ev.flags.filter(f => f.level === "deny").length > 1 ? "s" : ""} still fail. Fix them first.`, "bad"); return; }
     p.submittedAt = todayIso();
-    if (ev.auto) { p.status = "approved"; p.decidedBy = "FundPath auto-approval"; p.decidedAt = todayIso(); p.lines.forEach(l => { l.approved = +l.amount; }); logEvt(o.id, `${p.id} auto-approved: 7/7 criteria, ${money(ev.total)} available in ASG funds`);
+    if (ev.auto) { p.status = "approved"; p.decidedBy = "FundPath auto-approval"; p.decidedAt = todayIso(); p.lines.forEach(l => { l.approved = ev.lineAward[l.id] ?? +l.amount; }); logEvt(o.id, `${p.id} auto-approved: 7/7 criteria, ${money(ev.total)} available in ASG funds`);
       save(); render(); UI.modal = () => `<div class="mh"><h2>Approved automatically</h2><button class="x" data-a="closeModal">×</button></div><div class="bigok">✓</div><p><b>${money(ev.total)}</b> for ${esc(S.settings.semester)} is approved. All 7 ASG committee criteria passed, so there's no 1–2 week email wait.</p><p class="muted small">ASG can still spot-check auto-approved proposals. Next, generate the Spend Authorization straight from this budget.</p><div class="mf"><span></span><button class="btn" data-a="genSA">Generate Spend Authorization →</button></div>`; render(); }
     else { p.status = "review"; logEvt(o.id, `${p.id} sent to the ASG Funding Committee (${ev.flags.length} item${ev.flags.length > 1 ? "s" : ""} need judgment)`); save(); render(); toast("Sent to the ASG Funding Committee with the flagged items attached"); } },
   exportSheet: async () => { const p = proposalFor(S.orgId); const ev = (id) => (p.events.find(e => e.id === id) || {}).name || "";
-    const t = ["Step 2: Events and Trips", "Type\tName\tDate", ...p.events.map(e => `${e.type}\t${e.name}\t${e.start}${e.end ? " - " + e.end : ""}`), "", "Step 3: Budget - Events and Trips", "Event/Trip\tBudget Item\tCategory\tAmount\tComments", ...p.lines.filter(l => CATS[l.cat] && (CATS[l.cat].event || CATS[l.cat].trip)).map(l => `${ev(l.eventId)}\t${l.item}\t${l.cat}\t${l.amount}\t${l.comment}`), "", "Step 4: Budget - Non-Event", "Budget Item\tCategory\tAmount\tComments", ...p.lines.filter(l => !(CATS[l.cat] && (CATS[l.cat].event || CATS[l.cat].trip))).map(l => `${l.item}\t${l.cat}\t${l.amount}\t${l.comment}`)].join("\n");
+    const t = ["Step 2: Events and Trips", "Type\tName\tDate", ...p.events.map(e => `${e.type}\t${e.name}\t${e.start}${e.end ? " - " + e.end : ""}`), "", "Step 3: Budget - Events and Trips", "Event/Trip\tBudget Item\tCategory\tAmount\tComments", ...p.lines.filter(l => isEv(l.cat)).map(l => `${ev(l.eventId)}\t${l.item}\t${l.cat}\t${l.amount}\t${l.comment}`), "", "Step 4: Budget - Non-Event", "Budget Item\tCategory\tAmount\tComments", ...p.lines.filter(l => !(isEv(l.cat))).map(l => `${l.item}\t${l.cat}\t${l.amount}\t${l.comment}`)].join("\n");
     try { await navigator.clipboard.writeText(t); toast("Copied. Paste into the ASG proposal sheet"); } catch (e) { UI.modal = () => `<div class="mh"><h2>ASG sheet format</h2><button class="x" data-a="closeModal">×</button></div><pre class="packet">${esc(t)}</pre>`; render(); } },
   importCsv: () => { UI.modal = () => `<div class="mh"><h2>Import from your Google Sheet</h2><button class="x" data-a="closeModal">×</button></div><p class="muted small">Copy Step 3 or Step 4 rows from the ASG proposal sheet and paste below. Columns: Event/Trip (optional), Budget Item, Category, Amount, Comments.</p><textarea id="csvIn" rows="8" placeholder="Founder Speaker Night\tFlyers\tEvent: Marketing\t120\tPosters around campus"></textarea><div class="mf"><span></span><button class="btn" data-a="doImport">Import lines</button></div>`; render(); },
   doImport: () => { const p = proposalFor(S.orgId); const rows = ($("#csvIn").value || "").split(/\n/).map(r => r.split(/\t|,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.replace(/^"|"$/g, "").trim())).filter(r => r.length >= 3);
@@ -541,11 +526,11 @@ const A = {
   workdayView: d => { UI.modal = () => workdayModal(d.id); render(); },
   submitSA: d => { const s = S.spend.find(x => x.id === d.id); const e = evaluateSpend(s, S);
     if (e.flags.some(f => f.rule === "TRAINING")) return toast("Treasurer isn't Workday-authorized yet", "bad");
-    s.status = "advisor"; (s.history = s.history || []).push({ at: todayIso(), who: orgById(s.orgId).treasurer, action: "Submitted" }); logEvt(s.orgId, `${s.id} submitted to advisor (${money(e.total)})`); save(); render(); toast(e.level === "deny" ? "Submitted. The reviewer will see the open flags" : "Submitted to your advisor"); },
-  advisorApprove: d => { const s = S.spend.find(x => x.id === d.id); s.status = "review"; s.history.push({ at: todayIso(), who: `${orgById(s.orgId).advisor} (advisor)`, action: "Approved" }); logEvt(s.orgId, `${s.id} approved by advisor, now with Accounts Payable`); save(); render(); toast("Approved. Sent to Accounts Payable + ASG"); },
-  returnSA: d => { const s = S.spend.find(x => x.id === d.id); const n = $("#notes-" + d.id); s.notes = n ? n.value : "Returned by advisor"; s.status = "returned"; s.history.push({ at: todayIso(), who: S.role === "advisor" ? "Advisor" : "Accounts Payable / ASG", action: "Returned", note: s.notes }); logEvt(s.orgId, `${s.id} returned: ${s.notes}`); save(); render(); toast("Returned to the treasurer"); },
+    s.status = "advisor"; s.wd = { status: "In progress · awaiting advisor", ref: s.wd && s.wd.ref || wdRef(), at: new Date().toISOString() }; (s.history = s.history || []).push({ at: todayIso(), who: orgById(s.orgId).treasurer, action: "Submitted" }); logEvt(s.orgId, `${s.id} submitted to advisor (${money(e.total)})`); save(); render(); toast(e.level === "deny" ? "Submitted. The reviewer will see the open flags" : "Submitted to your advisor"); },
+  advisorApprove: d => { const s = S.spend.find(x => x.id === d.id); s.status = "review"; s.wd = { status: "In progress · awaiting Accounts Payable", ref: (s.wd && s.wd.ref) || wdRef(), at: new Date().toISOString() }; s.history.push({ at: todayIso(), who: `${orgById(s.orgId).advisor} (advisor)`, action: "Approved" }); logEvt(s.orgId, `${s.id} approved by advisor, now with Accounts Payable`); save(); render(); toast("Approved. Sent to Accounts Payable + ASG"); },
+  returnSA: d => { const s = S.spend.find(x => x.id === d.id); const n = $("#notes-" + d.id); s.notes = n ? n.value : "Returned by advisor"; s.status = "returned"; if (s.wd) s.wd.status = "Sent back"; s.history.push({ at: todayIso(), who: S.role === "advisor" ? "Advisor" : "Accounts Payable / ASG", action: "Returned", note: s.notes }); logEvt(s.orgId, `${s.id} returned: ${s.notes}`); save(); render(); toast("Returned to the treasurer"); },
   approveClean: d => { const s = S.spend.find(x => x.id === d.id); const e = evaluateSpend(s, S); const removed = s.lines.filter(l => worst(e.lineFlags[l.id] || []) === "deny"); s.lines = s.lines.filter(l => worst(e.lineFlags[l.id] || []) !== "deny"); s.notes = `Removed: ${removed.map(l => `${l.desc} (${(e.lineFlags[l.id] || []).map(f => RULES[f.rule].title).join(", ")})`).join("; ")}`; A.apApprove(d, true); },
-  apApprove: (d, partial) => { const s = S.spend.find(x => x.id === d.id); s.status = s.kind === "SA" ? "approved" : "closed"; if (s.kind === "SA" && !s.cardLast4) s.cardLast4 = String(1000 + Math.floor(Math.random() * 8999)); s.history.push({ at: todayIso(), who: "Accounts Payable + ASG", action: partial === true ? "Approved clean lines" : "Approved", note: partial === true ? s.notes : (s.kind === "SA" ? "Card loaded; ready for pickup at 107 Roudebush Hall" : "Requisition approved") }); logEvt(s.orgId, `${s.id} approved by Accounts Payable${s.kind === "SA" ? ". Card ready at 107 Roudebush Hall" : ""}`); save(); render(); toast(s.kind === "SA" ? "Approved. Card loaded and ready for pickup" : "Requisition approved"); },
+  apApprove: (d, partial) => { const s = S.spend.find(x => x.id === d.id); s.status = s.kind === "SA" ? "approved" : "closed"; if (s.kind === "SA") s.wd = { status: "Approved · card funded", ref: (s.wd && s.wd.ref) || wdRef(), at: new Date().toISOString() }; if (s.kind === "SA" && !s.cardLast4) s.cardLast4 = String(1000 + Math.floor(Math.random() * 8999)); s.history.push({ at: todayIso(), who: "Accounts Payable + ASG", action: partial === true ? "Approved clean lines" : "Approved", note: partial === true ? s.notes : (s.kind === "SA" ? "Card loaded; ready for pickup at 107 Roudebush Hall" : "Requisition approved") }); logEvt(s.orgId, `${s.id} approved by Accounts Payable${s.kind === "SA" ? ". Card ready at 107 Roudebush Hall" : ""}`); save(); render(); toast(s.kind === "SA" ? "Approved. Card loaded and ready for pickup" : "Requisition approved"); },
   pickup: d => { const s = S.spend.find(x => x.id === d.id); s.status = "active"; s.history.push({ at: todayIso(), who: orgById(s.orgId).treasurer, action: "Picked up card" }); logEvt(s.orgId, `Picked up card for ${s.id}`); save(); UI.saId = null; A.go({ id: "card" }); },
   addTxn: d => { UI.modal = () => txnModal(d.id); render(); },
   saveTxn: d => { const s = S.spend.find(x => x.id === d.id); const t = { id: nextId("T", S.txns), orgId: s.orgId, saId: s.id, lineRef: $("#txLine").value, date: $("#txDate").value, merchant: $("#txMerch").value || "Vendor", amount: +$("#txAmt").value || 0, receiptDone: false, q: {}, file: "" }; S.txns.push(t); UI.modal = null; logEvt(s.orgId, `Card charge ${t.merchant} ${money(t.amount)}`); save(); render(); },
@@ -597,6 +582,215 @@ document.addEventListener("input", e => onField(e, false));
 document.addEventListener("change", e => { const t = e.target; if (t.tagName === "SELECT" || t.type === "checkbox") return; onField(e, true); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && UI.modal) A.closeModal(); });
 window.addEventListener("hashchange", () => { const v = location.hash.slice(1); if (v && VIEWS[v] && v !== UI.view) { const role = Object.keys(NAV).find(r => NAV[r].some(n => n[0] === v)); if (role && !NAV[S.role].some(n => n[0] === v)) S.role = role; UI.view = v; UI.saId = null; UI.modal = null; render(); } });
+// =====================================================================
+// Exec meeting (voice) → AI budget → submit sheet + form → auto-approve
+// → Workday Spend Authorization → AP review → card pickup
+// =====================================================================
+const VOICE = { on: true, rec: null, listening: false, speaking: false, media: null, chunks: [], recording: false, playing: false };
+const wdRef = () => "SPA-" + String(Math.floor(100000 + Math.random() * 899999));
+const EXEC = ["President", "Treasurer", "VP Events", "VP Marketing", "Exec board"];
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function M() { S.meeting = S.meeting || { transcript: [], built: null, stage: "idle", pipe: [] }; S.meeting.pipe = S.meeting.pipe || []; return S.meeting; }
+
+async function speak(text) {
+  if (!VOICE.on || !text) return;
+  VOICE.speaking = true; paintVoice();
+  try {
+    const r = await fetch("/api/tts", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text }) });
+    if (!r.ok || !(r.headers.get("content-type") || "").includes("audio")) throw new Error("no tts");
+    const a = new Audio(URL.createObjectURL(await r.blob())); VOICE.engine = "ElevenLabs";
+    await a.play(); await new Promise(res => { a.onended = res; a.onerror = res; });
+  } catch (e) {
+    if (window.speechSynthesis) { VOICE.engine = "browser voice"; await new Promise(res => { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = 1.04; u.onend = res; u.onerror = res; speechSynthesis.speak(u); setTimeout(res, 30000); }); }
+  }
+  VOICE.speaking = false; paintVoice();
+}
+function paintVoice() { const el = $("#voiceState"); if (el) el.innerHTML = voiceState(); }
+function voiceState() {
+  if (VOICE.speaking) return `<span class="vdot talk"></span>FundPath is speaking${VOICE.engine ? ` · ${VOICE.engine}` : ""}`;
+  if (VOICE.listening) return `<span class="vdot live"></span>Listening live${UI.interim ? `: <i>${esc(UI.interim)}</i>` : ""}`;
+  if (VOICE.recording) return `<span class="vdot live"></span>Recording for ElevenLabs transcription…`;
+  return `<span class="vdot"></span>Mic off`;
+}
+function heard(text, who) {
+  const m = M(); const t = text.trim(); if (!t) return;
+  if (m.stage === "confirm") {
+    if (/\b(yes|yeah|yep|yup|approve[ds]?|go ahead|submit( it)?|do it|sounds good|let'?s do it)\b/i.test(t)) { m.transcript.push([who || UI.speaker || "Exec board", t]); return A.meetYes(); }
+    if (/\b(no|nope|wait|hold on|cancel|stop)\b/i.test(t)) { m.transcript.push([who || UI.speaker || "Exec board", t]); return A.meetNo(); }
+  }
+  m.transcript.push([who || UI.speaker || "Exec board", t]); save(); paintTranscript();
+  if (/build (our|the|a) budget|fund ?path,? (build|make)|make (our|the) budget/i.test(t) && ["idle", "built"].includes(m.stage)) A.meetBuild();
+}
+function paintTranscript() { const el = $("#transcript"); if (!el) return; el.innerHTML = transcriptHtml(); el.scrollTop = el.scrollHeight; }
+function transcriptHtml() {
+  const m = M();
+  return m.transcript.length ? m.transcript.map(([w, t]) => `<div class="tl"><b>${esc(w)}</b><span>${esc(t)}</span></div>`).join("") : `<div class="muted pad">Start the mic and run your exec meeting like normal. Talk through events, what you need and what it costs. Say <b>“FundPath, build our budget”</b> when you're done.</div>`;
+}
+function startListening() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { toast("Live transcription needs Chrome or Edge. Use “Record · ElevenLabs” or the demo meeting.", "bad"); return; }
+  const r = new SR(); r.continuous = true; r.interimResults = true; r.lang = "en-US";
+  r.onresult = ev => { for (let i = ev.resultIndex; i < ev.results.length; i++) { const res = ev.results[i]; const t = res[0].transcript; if (res.isFinal) { UI.interim = ""; if (!VOICE.speaking) heard(t); } else UI.interim = t; } paintVoice(); };
+  r.onerror = e => { if (e.error === "not-allowed") { VOICE.listening = false; toast("Microphone blocked. Allow it in the address bar.", "bad"); render(); } };
+  r.onend = () => { if (VOICE.listening) { try { r.start(); } catch (e) {} } };
+  try { r.start(); } catch (e) {}
+  VOICE.rec = r; VOICE.listening = true; render();
+}
+function stopListening() { VOICE.listening = false; try { VOICE.rec && VOICE.rec.stop(); } catch (e) {} render(); }
+async function toggleRecord() {
+  if (VOICE.recording) { VOICE.media.stop(); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mr = new MediaRecorder(stream); VOICE.media = mr; VOICE.chunks = [];
+    mr.ondataavailable = e => VOICE.chunks.push(e.data);
+    mr.onstop = async () => {
+      VOICE.recording = false; stream.getTracks().forEach(t => t.stop()); render(); toast("Transcribing with ElevenLabs…");
+      const blob = new Blob(VOICE.chunks, { type: mr.mimeType || "audio/webm" });
+      const b64 = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(",")[1]); fr.readAsDataURL(blob); });
+      try { const r = await fetch("/api/stt", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ audio: b64, mime: blob.type }) }); const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status);
+        (j.text || "").split(/(?<=[.?!])\s+/).forEach(x => heard(x)); toast("Transcribed");
+      } catch (e) { toast("ElevenLabs isn't connected on this deploy. Use the live mic or demo meeting.", "bad"); }
+    };
+    mr.start(); VOICE.recording = true; render();
+  } catch (e) { toast("Microphone blocked. Allow it in the address bar.", "bad"); }
+}
+
+function sheetPreview(p, o) {
+  const evn = id => (p.events.find(e => e.id === id) || {}).name || "";
+  const evL = p.lines.filter(l => isEv(l.cat)), nonL = p.lines.filter(l => !isEv(l.cat));
+  return `<div class="gsheet"><div class="gs-h"><span class="gs-ico"></span><b>ASG Club Funding Proposal · ${esc(o.name)}</b><small>Google Sheets · ${esc(S.settings.semester)} ${esc(S.settings.cycle || "")}</small></div>
+  <table><tr class="gs-sec"><td colspan="5">Step 1 · Club info</td></tr>
+  <tr><td>Organization</td><td colspan="4">${esc(o.name)} · Tier ${TIER_ROMAN[o.tier]} · ${esc(o.worktag)}</td></tr>
+  <tr><td>Officers</td><td colspan="4">${esc(o.president)} (president) · ${esc(o.treasurer)} (treasurer) · ${esc(o.advisor)} (advisor)</td></tr>
+  <tr class="gs-sec"><td colspan="5">Step 2 · Events and trips</td></tr>
+  ${p.events.map(e => `<tr><td>${esc(e.type)}</td><td colspan="2">${esc(e.name)}</td><td colspan="2">${e.start ? fmtD(e.start) : "date TBD"} · ${eventPct(e, o).pct}% criteria</td></tr>`).join("")}
+  <tr class="gs-sec"><td colspan="5">Step 3 · Event and trip budget</td></tr>
+  <tr class="gs-th"><td>Event</td><td>Budget item</td><td>Category</td><td class="r">Amount</td><td>Quote</td></tr>
+  ${evL.map(l => `<tr><td>${esc(evn(l.eventId))}</td><td>${esc(l.item)}</td><td>${esc(l.cat)}</td><td class="r">${money(+l.amount)}</td><td>${l.quote ? "✓" : ""}</td></tr>`).join("")}
+  <tr class="gs-sec"><td colspan="5">Step 4 · Non-event budget</td></tr>
+  ${nonL.map(l => `<tr><td></td><td>${esc(l.item)}</td><td>${esc(l.cat)}</td><td class="r">${money(+l.amount)}</td><td>${l.quote ? "✓" : ""}</td></tr>`).join("")}
+  <tr class="gs-tot"><td colspan="3">Total request</td><td class="r">${money(p.lines.reduce((t, l) => t + +l.amount, 0))}</td><td></td></tr></table></div>`;
+}
+function formPreview(p, o) {
+  const f = (q, a) => `<div class="gf-q"><span>${q}</span><b>${esc(a)}</b></div>`;
+  return `<div class="gform"><div class="gf-bar"></div><b>ASG Funding Request Form</b><small>Signed in as ${esc(o.entityEmail)} (entity account)</small>
+    ${f("Organization name", o.name)}${f("Red Brick Rewards tier", "Tier " + TIER_ROMAN[o.tier])}${f("Treasurer", `${o.treasurer} · ${o.treasurerEmail}`)}${f("Total amount requested", money(p.lines.reduce((t, l) => t + +l.amount, 0)))}${f("Link to proposal sheet", "docs.google.com/spreadsheets/…/" + o.worktag)}${f("Events registered on Miami Central?", "Yes")}${f("Acknowledgements", "All four confirmed")}</div>`;
+}
+function viewMeeting() {
+  const o = ORG(); const m = M(); const b = m.built;
+  const listeningBtn = VOICE.listening ? `<button class="btn" data-a="meetMic">■ Stop mic</button>` : `<button class="btn" data-a="meetMic">● Start mic</button>`;
+  const removed = b ? b.changes.filter(c => c.kind === "removed" || c.kind === "capped" || c.kind === "dropped") : [];
+  let right = "";
+  if (!b && m.stage !== "building") right = `<section class="card"><h2>What FundPath does with your meeting</h2><ol class="howto"><li><b>Listens</b> to your exec board (live mic, or ElevenLabs transcription).</li><li><b>Builds the ASG budget</b>: events, line items, categories, amounts, quotes you mention.</li><li><b>Applies every ASG rule</b> for Tier ${TIER_ROMAN[o.tier]}: takes out what ASG won't fund and caps anything over a limit.</li><li><b>Asks you to approve</b>, out loud. Say “yes”.</li><li><b>Submits</b> the ASG proposal sheet and form, gets the rules decision, and creates your Workday Spend Authorization.</li></ol></section>`;
+  if (m.stage === "building") right = `<section class="card"><h2>Building your budget…</h2><div class="typing"><i></i><i></i><i></i></div><p class="muted small">Pulling events from Miami Central, matching categories, checking SR §11 and §19 limits.</p></section>`;
+  if (b) right = `
+    <section class="card ai-card ${m.stage === "confirm" ? "ask" : ""}"><div class="ai-h"><span class="ai-dot"></span><b>FundPath assistant</b>${chip(b.ev.auto ? "approved" : "review", b.ev.auto ? `${b.ev.passed}/7 · auto-approvable` : `${b.ev.passed}/7 · needs review`)}</div>
+      <p class="ai-say">${esc(m.say || "")}</p>
+      ${removed.length ? `<ul class="changes">${removed.map(c => `<li><span class="lv ${c.kind === "capped" ? "warn" : "deny"}">${c.kind}</span> ${esc(c.what)} <small class="muted">${esc(c.why)}</small> ${ruleTag(c.rule)}</li>`).join("")}</ul>` : ""}
+      ${b.ev.flags.length ? checkList(b.ev.flags.filter(f => f.rule !== "ELIGINFO")) : ""}
+      ${m.stage === "confirm" ? `<div class="ask-row"><span>Say <b>“yes”</b> or click</span><span><button class="btn ghost" data-a="meetEdit">Edit first</button> <button class="btn ghost" data-a="meetNo">No</button> <button class="btn big" data-a="meetYes">Yes, submit it</button></span></div>` : ""}
+    </section>
+    ${m.pipe.length ? `<section class="card"><h2>Submission</h2><ol class="pipe-v">${m.pipe.map(x => `<li class="${x.done ? "done" : "now"}"><i>${x.done ? "✓" : ""}</i><div><b>${esc(x.t)}</b><span>${x.d || ""}</span></div></li>`).join("")}</ol>
+      ${m.stage === "done" ? `<div class="mf"><span class="muted small">Next: ASG / Accounts Payable reviews the Spend Authorization.</span><button class="btn" data-a="meetToAP">Open ASG / AP view →</button></div>` : ""}</section>` : ""}
+    ${sheetPreview(b.p, o)}${formPreview(b.p, o)}`;
+  return `<header class="ph"><div><h1>Exec meeting</h1><p>${esc(o.name)} · Tier ${TIER_ROMAN[o.tier]} (${money(S.settings.tierMax[o.tier])}/semester) · ${esc(S.settings.semester)} ${esc(S.settings.cycle || "")}, closes ${fmtD(S.settings.window.close)}</p></div>
+    <div class="ph-actions"><label class="check vt"><input type="checkbox" data-a="voiceOn" ${VOICE.on ? "checked" : ""}> FundPath talks back</label><button class="btn ghost" data-a="meetReset">New meeting</button></div></header>
+  <div class="meet">
+    <section class="card mic-card"><div class="mic-h"><div id="voiceState" class="vstate">${voiceState()}</div>
+      <div class="mic-ctl"><select data-a2="speaker" title="Who's talking">${EXEC.map(x => `<option ${x === (UI.speaker || "Exec board") ? "selected" : ""}>${x}</option>`).join("")}</select>${listeningBtn}<button class="btn ghost" data-a="meetRecord">${VOICE.recording ? "■ Stop & transcribe" : "Record · ElevenLabs"}</button></div></div>
+      <div id="transcript" class="transcript">${transcriptHtml()}</div>
+      <form class="composer" data-a2="meetType"><input id="meetIn" placeholder="Or type what someone said…"><button class="btn ghost">Add</button></form>
+      <div class="mic-foot">${m.transcript.length ? "" : `<button class="btn ghost sm" data-a="meetDemo">▶ Play demo meeting (${esc(o.name.replace("Miami University ", ""))})</button>`}<button class="btn sm" data-a="meetBuild" ${m.transcript.length ? "" : "disabled"}>Build our budget</button></div>
+    </section>
+    <div>${right}</div>
+  </div>`;
+}
+function cardReadyBanner(o) {
+  const s = S.spend.find(x => x.orgId === o.id && x.kind === "SA" && x.status === "approved"); if (!s) return "";
+  return `<div class="banner card-ready"><div><b>Your card is ready.</b> Accounts Payable approved ${s.id} and loaded ${money(s.lines.reduce((t, l) => t + spendLineAmt(l), 0))}. Pick it up at AP, 107 Roudebush Hall.</div><button class="btn" data-a="cardGo" data-id="${s.id}">Get the card →</button></div>`;
+}
+function cardModal(id) {
+  const s = S.spend.find(x => x.id === id); const o = orgById(s.orgId); const total = s.lines.reduce((t, l) => t + spendLineAmt(l), 0);
+  return `<div class="mh"><h2>Pick up your card · ${s.id}</h2><button class="x" data-a="closeModal">×</button></div>
+  <div class="cardvis"><small>Miami University · Student Org Card</small><b>•••• •••• •••• ${esc(s.cardLast4 || "0000")}</b><span>${esc(o.name)}</span><em>${money(total)} available · ${esc(o.worktag)} · FD1000</em></div>
+  <ol class="howto"><li>Go to <b>Accounts Payable, 107 Roudebush Hall</b>, Mon–Fri 8–5. Bring your Miami ID.</li><li>The card is loaded for exactly what's on ${s.id}: ${s.lines.map(l => esc(l.desc)).join(", ")}.</li><li>Every charge needs the receipt and the six-question Receipts Questionnaire within the week ${ruleTag("RECEIPTS")}.</li><li>On-campus charges (rooms, Rec Center) are journal transfers, not the card ${ruleTag("JOURNAL")}.</li></ol>
+  <div class="mf"><span class="muted small">Card valid ${fmtD(s.start)} – ${fmtD(s.end)}</span><button class="btn" data-a="pickup" data-id="${s.id}">I picked up the card</button></div>`;
+}
+
+function viewWorkday() {
+  const asg = S.role === "asg"; const o = ORG();
+  const list = S.spend.filter(s => s.kind === "SA" && (asg || s.orgId === o.id)).slice().reverse();
+  return `<header class="ph"><div><h1>Workday ${asg ? "sync" : ""}</h1><p>FundPath works alongside Workday. It builds each Spend Authorization from the approved ASG budget, then sends it to Workday so nobody types it twice.</p></div>
+    <div class="ph-actions"><button class="btn ghost" data-a="eibAll">Download EIB (CSV)</button></div></header>
+  <div class="banner info"><b>Demo tenant.</b> Submissions here go to a simulated Workday tenant. In production FundPath calls Workday's <code>Submit_Spend_Authorization</code> web service (Resource Management) with an integration account set up by Miami IT, or uploads the same data as an EIB. The payload below is exactly what would be sent.</div>
+  <section class="card"><table class="tbl"><thead><tr><th>Spend Authorization</th>${asg ? "<th>Org</th>" : ""}<th class="r">Total</th><th>FundPath</th><th>Workday</th><th>Workday ref</th><th></th></tr></thead><tbody>
+  ${list.map(s => { const tot = evaluateSpend(s, S).total; const w = s.wd || {}; return `<tr><td class="mono">${s.id}<br><small class="muted">${esc(s.descr)}</small></td>${asg ? `<td>${esc(orgById(s.orgId).name)}</td>` : ""}<td class="r mono">${money(tot)}</td><td>${chip(s.status)}</td><td>${w.status ? `<span class="lv ${/Approved/.test(w.status) ? "ok" : /back/.test(w.status) ? "deny" : "warn"}">${esc(w.status)}</span>` : `<span class="muted small">Not sent</span>`}</td><td class="mono small">${esc(w.ref || "—")}</td><td class="r"><button class="btn sm ghost" data-a="wdPayload" data-id="${s.id}">Payload</button> <button class="btn sm ghost" data-a="workdayView" data-id="${s.id}">Copy sheet</button></td></tr>`; }).join("") || `<tr><td colspan=7 class=muted>No Spend Authorizations yet.</td></tr>`}
+  </tbody></table></section>
+  <section class="card"><h2>How FundPath fits with Workday</h2><div class="routes">
+    <div><h3>1 · Budget → SA</h3><p class="small">Approved ASG lines become SA lines with the right expense item, fund (FD1000/PRG040 or FD9001/PRG100) and the org's SA1#### worktag.</p></div>
+    <div><h3>2 · Workday routing</h3><p class="small">Advisor approval, then Accounts Payable, same as today. FundPath shows the status and the second-line checks next to it.</p></div>
+    <div><h3>3 · Card and receipts</h3><p class="small">Card charges come back from Workday; FundPath matches each to its budget line and runs the Receipts Questionnaire before you close the SA.</p></div></div></section>`;
+}
+function wdModal(id) {
+  const s = S.spend.find(x => x.id === id);
+  return `<div class="mh"><h2>Workday payload · ${s.id}</h2><button class="x" data-a="closeModal">×</button></div><p class="muted small">Submit_Spend_Authorization request body (JSON form of the Workday web-service call).</p><pre class="packet">${esc(JSON.stringify(workdayPayload(s, S), null, 2))}</pre><div class="mf"><span></span><button class="btn ghost" data-a="copy" data-v="${esc(JSON.stringify(workdayPayload(s, S), null, 2))}">Copy JSON</button></div>`;
+}
+function eibCsv(list) {
+  const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const rows = [["Spend_Authorization_ID", "Company", "Start_Date", "End_Date", "Description", "Business_Purpose", "Justification", "Line", "Expense_Item", "Quantity", "Per_Unit_Amount", "Memo", "Student_Org_Worktag", "Fund", "Program"]];
+  list.forEach(s => { const o = orgById(s.orgId); s.lines.forEach((l, i) => rows.push([s.id, "100 Miami University", s.start, s.end, s.descr, "Student Org Card Request", s.justification, i + 1, l.expense, l.qty, (+l.unit).toFixed(2), l.memo, o.worktag, s.fund === "ASG" ? "FD1000" : "FD9001", s.fund === "ASG" ? "PRG040" : "PRG100"])); });
+  return rows.map(r => r.map(q).join(",")).join("\n");
+}
+
+Object.assign(A, {
+  voiceOn: (d, el) => { VOICE.on = el.checked; if (!VOICE.on && window.speechSynthesis) speechSynthesis.cancel(); },
+  meetMic: () => VOICE.listening ? stopListening() : startListening(),
+  meetRecord: () => toggleRecord(),
+  meetReset: () => { S.meeting = { transcript: [], built: null, stage: "idle", pipe: [] }; VOICE.playing = false; save(); render(); },
+  meetDemo: async () => { const m = M(); if (VOICE.playing) return; VOICE.playing = true; m.stage = "idle"; render();
+    for (const [w, t] of DEMO_MEETING) { if (!VOICE.playing) break; await sleep(700 + Math.min(1600, t.length * 9)); heard(t, w); }
+    VOICE.playing = false; },
+  meetBuild: async () => { const m = M(); const o = ORG(); if (!m.transcript.length) return; m.stage = "building"; m.pipe = []; save(); render();
+    await sleep(1400);
+    const b = aiBuildBudget(m.transcript.map(([w, t]) => `${w}: ${t}`).join("\n"), o, S.settings);
+    applyFix(b.p, o, { type: "ack" }); b.ev = evaluateProposal(b.p, o, S.settings);
+    m.built = b; const removed = b.changes.filter(c => c.kind === "removed");
+    const evs = b.p.events.map(e => e.name);
+    m.say = `I heard ${b.extracted.lines.length} requests totaling ${money(b.heard)}. ${removed.length ? `ASG won't fund ${removed.map(c => { const w = c.what.replace(/ \(.*\)$/, ""); return w.charAt(0).toLowerCase() + w.slice(1); }).join(" or ")}, so I took ${removed.length > 1 ? "those" : "that"} out. ` : ""}Your proposal is ${money(b.ev.total)}: ${b.p.lines.length} lines for ${evs.join(" and ") || "general operations"}${b.p.lines.some(l => !l.eventId) ? " plus club operations" : ""}. ${b.ev.auto || b.ev.flags.every(f => f.rule === "ELIGINFO") ? `It's inside every Tier ${TIER_ROMAN[o.tier]} limit and passes all seven committee criteria.` : `There ${b.ev.flags.length === 1 ? "is one thing" : `are ${b.ev.flags.length} things`} a person still needs to look at.`} Do you approve submitting the ASG proposal sheet and funding form?`;
+    m.stage = "confirm"; logEvt(o.id, `FundPath built a ${money(b.ev.total)} budget from the exec meeting`); save(); render(); speak(m.say); },
+  meetNo: () => { const m = M(); m.stage = "built"; save(); render(); speak("Okay. I won't submit anything. Keep talking, or edit the budget first."); },
+  meetEdit: () => { const m = M(); const o = ORG(); const p = materialize(m.built.p, o, "draft"); m.stage = "built"; save(); A.go({ id: "proposal" }); toast(`${p.id} opened in the proposal editor`); },
+  meetYes: async () => { const m = M(); const o = ORG(); if (m.stage !== "confirm") return; m.stage = "running"; m.pipe = []; save(); render();
+    const step = async (t, d, ms = 900) => { m.pipe.push({ t, d, done: false }); render(); await sleep(ms); m.pipe[m.pipe.length - 1].done = true; save(); render(); };
+    const p = materialize(m.built.p, o, "draft"); applyFix(p, o, { type: "ack" });
+    await step("Filled the ASG Club Funding Proposal sheet", `Steps 1–6 · ${p.events.length} events · ${p.lines.length} lines · ${money(p.lines.reduce((t, l) => t + +l.amount, 0))}`);
+    p.status = "submitted"; p.submittedAt = todayIso(); logEvt(o.id, `${p.id} proposal sheet + ASG funding form submitted from ${o.entityEmail}`);
+    await step("Submitted the ASG funding Google Form", `From ${esc(o.entityEmail)} · acknowledgements confirmed by the exec board`);
+    const ev = evaluateProposal(p, o, S.settings);
+    if (!ev.auto) { p.status = "review"; save(); await step("Sent to the ASG Funding Committee", `${ev.flags.length} item${ev.flags.length > 1 ? "s" : ""} need a person`); m.stage = "done"; save(); render(); speak("Submitted. A few items need the Funding Committee, so it's with them now."); return; }
+    p.status = "approved"; p.decidedBy = "FundPath auto-approval"; p.decidedAt = todayIso(); p.lines.forEach(l => { l.approved = ev.lineAward[l.id] ?? +l.amount; });
+    logEvt(o.id, `${p.id} auto-approved: 7/7 criteria, ${money(ev.award)}`);
+    await step("ASG rules check: 7/7 criteria → approved", `${money(ev.award)} approved · Finance & Audit recommendation, ratified by Senate (SR §3.1)`, 1100);
+    const r = genSAFor(o.id); const sa = r.sa;
+    if (sa) { sa.wd = { status: "In progress · awaiting advisor", ref: wdRef(), at: new Date().toISOString() }; sa.history.push({ at: todayIso(), who: "FundPath", action: "Created and submitted in Workday", note: `${sa.wd.ref} · built from ${p.id}` }); }
+    await step("Created and submitted the Workday Spend Authorization", sa ? `${sa.id} · ${sa.descr} · ${money(sa.lines.reduce((t, l) => t + spendLineAmt(l), 0))} on the card${r.reqs ? ` · plus ${r.reqs} speaker requisition (contract, not the card)` : ""} · Workday ${sa.wd.ref}` : "Nothing for the card");
+    if (sa && S.settings.advisorPreauth) { sa.status = "review"; sa.wd.status = "In progress · awaiting Accounts Payable"; sa.history.push({ at: todayIso(), who: `${o.advisor} (advisor)`, action: "Pre-authorized", note: "Advisor pre-authorizes SAs that exactly match the approved proposal" }); logEvt(o.id, `${sa.id} pre-authorized by ${o.advisor}; now with Accounts Payable + ASG`); }
+    await step("Advisor pre-authorization applied", `${esc(o.advisor)} · SA matches the approved proposal line for line → routed to Accounts Payable + ASG`);
+    m.stage = "done"; save(); render();
+    speak(`Done. Your proposal is approved for ${money(ev.award).replace(".00", "")}, and spend authorization ${sa ? sa.id.replace("-", " ") : ""} is in Workday waiting on Accounts Payable.`); },
+  meetToAP: () => { S.role = "asg"; UI.view = "sareview"; location.hash = "sareview"; save(); render(); window.scrollTo(0, 0); },
+  cardGo: d => { UI.modal = () => cardModal(d.id); render(); },
+  wdPayload: d => { UI.modal = () => wdModal(d.id); render(); },
+  eibAll: () => { const list = S.spend.filter(s => s.kind === "SA" && (S.role === "asg" || s.orgId === S.orgId)); const blob = new Blob([eibCsv(list)], { type: "text/csv" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "fundpath_spend_authorizations_eib.csv"; a.click(); toast("EIB file downloaded"); }
+});
+function materialize(bp, o, status) {
+  S.proposals = S.proposals.filter(x => !(x.orgId === o.id && x.semester === S.settings.semester && ["draft", "returned"].includes(x.status)));
+  const p = JSON.parse(JSON.stringify(bp)); p.id = nextId("P", S.proposals); p.orgId = o.id; p.semester = S.settings.semester; p.cycle = S.settings.cycle; p.status = status; p.created = todayIso(); p.journalPaid = {}; p.source = "Exec meeting";
+  S.proposals.push(p); return p;
+}
+document.addEventListener("submit", e => { const f = e.target.closest("[data-a2=meetType]"); if (!f) return; e.preventDefault(); const i = $("#meetIn"); heard(i.value); i.value = ""; i.focus(); });
+document.addEventListener("change", e => { if (e.target.dataset && e.target.dataset.a2 === "speaker") UI.speaker = e.target.value; });
+
 load();
 { const v = location.hash.slice(1); if (v && VIEWS[v]) { const role = Object.keys(NAV).find(r => NAV[r].some(n => n[0] === v)); if (role && !NAV[S.role].some(n => n[0] === v)) S.role = role; UI.view = v; } }
 render();

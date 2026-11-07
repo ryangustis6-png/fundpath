@@ -46,3 +46,24 @@ Optional AI: deploy to Vercel and set `ANTHROPIC_API_KEY`. `api/ai.js` handles t
 | `api/ai.js` | Vercel function for AI answers |
 
 Demo data lives in the browser (localStorage). "Reset demo data" is in the sidebar.
+
+## Demo run (exec meeting → card)
+
+1. **Treasurer → Exec meeting · voice.** Start the mic (Chrome/Edge live transcription) or click **Record · ElevenLabs**, or **Play demo meeting**. Say "FundPath, build our budget".
+2. FundPath builds the ASG proposal from what was said, removes what ASG won't fund (SR §19.1), caps anything over a limit, and fills the ASG proposal sheet and funding form. It reads the summary aloud and asks for approval.
+3. Say **"yes"** (or click). It submits the sheet and form, runs the 7 committee criteria (auto-approves when all pass; a Finance & Audit recommendation ratified by Senate, SR §3.1), creates the Workday Spend Authorization from the approved lines, applies the advisor's pre-authorization and routes it to Accounts Payable + ASG.
+4. **ASG / AP → Spend review.** Review the second-line checks and click **Approve & load card**.
+5. **Treasurer:** the "Your card is ready" banner appears → **Get the card** → pick up at AP, 107 Roudebush Hall.
+
+## Optional environment variables (Vercel)
+
+- `ELEVENLABS_API_KEY` (and optional `ELEVENLABS_VOICE_ID`): FundPath's spoken voice (`/api/tts`) and recorded-meeting transcription (`/api/stt`). Without it, the browser's built-in voice is used.
+- `ANTHROPIC_API_KEY`: AI answers in Funding Help.
+
+## Workday
+
+Workday is simulated in this demo. Each Spend Authorization has the exact `Submit_Spend_Authorization` payload FundPath would send (Workday view → Payload) and an EIB CSV export.
+
+## Limits FundPath enforces
+
+Source: ASG Funding Committee Standing Rules 2025–2026 and the ASG proposal template. When they differ, FundPath enforces the stricter one and cites both. Tier IV is $5,000/semester. Speakers are capped at $3,000 (template; SR §11.2 allows $7,000). Food by tier is $500/$750/$1,000. Promotional materials are $150/event, decorations $250/event, organizational materials $600/semester, banners $200/semester, electronics $2,000. See the Rules page for the full list.
