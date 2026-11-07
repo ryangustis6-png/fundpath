@@ -361,8 +361,8 @@ Object.assign(A, {
 // Real club workspace
 // ---------------------------------------------------------------------------
 function renderSetupShell() {
-  $("#app").innerHTML = `<header class="topbar"><a class="tb-brand"><span class="tb-logo">F</span><span><b>FundPath</b><small>for Miami Central</small></span></a><div class="tb-right"><span class="mode real" data-a="modeMenu">My club data</span></div></header>
-  <div class="shell one"><main id="main">${viewSetup()}</main></div>${UI.modal ? `<div class="scrim" data-a="closeModal"></div><div class="modal">${UI.modal()}</div>` : ""}`;
+  $("#app").innerHTML = `<header class="site-head"><div class="utility"><div class="wrap"><nav class="ut-links"><a href="https://miamicentral.miamioh.edu" target="_blank" rel="noopener">Miami Central</a><a href="https://miamiohasg.com/funding-1" target="_blank" rel="noopener">ASG Funding</a></nav><div class="ut-right"><button class="ut-btn" data-a="modeMenu">My club data</button></div></div></div><div class="mainbar"><div class="wrap"><a class="brand2"><span class="mark">F</span><span class="word"><b>FundPath</b><small>Student Organization Funding</small></span></a></div></div></header>
+  <main id="main" class="wrap">${viewSetup()}</main>${siteFooter()}${UI.modal ? `<div class="scrim" data-a="closeModal"></div><div class="modal">${UI.modal()}</div>` : ""}`;
 }
 function viewSetup() {
   const f = (k, l, ph = "", type = "text") => `<label>${l}<input name="${k}" type="${type}" placeholder="${esc(ph)}"></label>`;
@@ -439,9 +439,9 @@ const _render = render;
 render = function () {
   _render();
   if (S.mode !== "demo" || UI.hidePresenter) return;
-  const tb = document.querySelector(".topbar"); if (!tb) return;
+  const tb = document.querySelector(".gband") || document.querySelector(".site-head"); if (!tb) return;
   const el = document.createElement("div"); el.className = "presenter";
-  el.innerHTML = `<b>Demo</b><ol>${demoBeats().map((x, i) => `<li class="${x.done ? "done" : x.on ? "on" : ""}">${i + 1}. ${esc(x.n)}</li>`).join("")}</ol><button data-a="demoRestart">Restart demo</button><button data-a="demoHide" style="margin-left:0">Hide</button>`;
+  el.innerHTML = `<div class="wrap pr-in"><b>Demo</b><ol>${demoBeats().map((x, i) => `<li class="${x.done ? "done" : x.on ? "on" : ""}">${i + 1}. ${esc(x.n)}</li>`).join("")}</ol><button data-a="demoRestart">Restart demo</button><button data-a="demoHide" style="margin-left:0">Hide</button></div>`;
   tb.after(el);
 };
 Object.assign(A, {
@@ -455,4 +455,4 @@ VIEWS.upload = () => { const o = ORG(); const ap = S.proposals.find(p => p.orgId
 
 // Dashboard: lead with the exec meeting when there's no proposal yet
 const _vh = VIEWS.home;
-VIEWS.home = () => _vh().replace(/<button class="btn" data-a="newProposal">Start ([^<]*) proposal<\/button>/, '<button class="btn ghost" data-a="go" data-id="upload">Upload a budget</button><button class="btn ghost" data-a="newProposal">Start $1 proposal by hand</button><button class="btn" data-a="go" data-id="meeting">Start with an exec meeting</button>');
+VIEWS.home = () => _vh().replace(/<h1>[^<]*<\/h1><p>[^<]*<\/p>/, `<h1>Dashboard</h1><p>Where ${esc(ORG().name)}'s funding and spending stand for ${esc(S.settings.semester)}.</p>`).replace(/<button class="btn" data-a="newProposal">Start ([^<]*) proposal<\/button>/, '<button class="btn ghost" data-a="go" data-id="upload">Upload a budget</button><button class="btn ghost" data-a="newProposal">Start $1 proposal by hand</button><button class="btn" data-a="go" data-id="meeting">Start with an exec meeting</button>');

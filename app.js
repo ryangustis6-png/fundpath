@@ -28,47 +28,62 @@ const chip = (s, label) => `<span class="chip ${CHIP[s] || "gray"}">${esc(label 
 const lvl = l => l === "deny" ? `<span class="lv deny">Fails</span>` : l === "warn" ? `<span class="lv warn">Check</span>` : `<span class="lv ok">Pass</span>`;
 const ruleTag = id => { const r = RULES[id]; if (!r) return ""; return `<button class="rtag ${r.kind}" data-a="showRule" data-id="${id}">${esc(r.title)}<i>${r.kind}</i></button>`; };
 
+const TOP_ONLY = ["help", "resources", "rules"];
+function siteHeader(role, o) {
+  const roleSel = `<label class="ut-sel">Viewing as <select data-a2="pickRole">${[["treasurer", "Treasurer"], ["advisor", "Advisor"], ["asg", "ASG / Accounts Payable"]].map(([r, l]) => `<option value="${r}" ${role === r ? "selected" : ""}>${l}</option>`).join("")}</select></label>`;
+  return `<header class="site-head">
+    <div class="utility"><div class="wrap">
+      <nav class="ut-links"><a href="https://miamicentral.miamioh.edu" target="_blank" rel="noopener">Miami Central</a><a href="https://miamiohasg.com/funding-1" target="_blank" rel="noopener">ASG Funding</a><a href="https://miamioh.instructure.com/courses/225476" target="_blank" rel="noopener">Treasurer Training</a><a href="https://www.myworkday.com/miamioh" target="_blank" rel="noopener">Workday</a></nav>
+      <div class="ut-right"><input class="ut-search" placeholder="Search or ask FundPath" data-a2="search" aria-label="Search or ask FundPath">${roleSel}<button class="ut-btn" data-a="modeMenu">${S.mode === "real" ? "My club data" : "Demo data"}</button></div>
+    </div></div>
+    <div class="mainbar"><div class="wrap">
+      <a class="brand2" href="#${NAV[role][0][0]}"><span class="mark">F</span><span class="word"><b>FundPath</b><small>Student Organization Funding</small></span></a>
+      <nav class="mainnav">${(role === "treasurer" ? [[NAV[role][0][0], "Funding", !TOP_ONLY.includes(UI.view)], ["help", "Funding Help"], ["resources", "Resources"], ["rules", "Rules"]] : role === "asg" ? [["sareview", "Review"], ["inbox", "Liaison Inbox"], ["oversight", "Organizations"], ["rules", "Rules and Settings"]] : [["advq", "Approvals"], ["rules", "Rules"]]).map(([v, l, on]) => `<a href="#${v}" class="${on || UI.view === v ? "on" : ""}">${l}</a>`).join("")}
+        ${role === "treasurer" ? `<a class="cta" href="#meeting">Start an Exec Meeting</a>` : ""}</nav>
+    </div></div>
+  </header>`;
+}
+function siteFooter() {
+  return `<footer class="site-foot"><div class="wrap">
+    <div class="sf-cols">
+      <div><b class="sf-brand">FundPath</b><p>ASG funding and student organization spending for Miami University, in one place.</p></div>
+      <div><h4>Funding</h4><a href="#meeting">Exec meeting</a><a href="#proposal">ASG proposal</a><a href="#upload">Upload a budget</a><a href="#rules">Limits and rules</a></div>
+      <div><h4>Spending</h4><a href="#spend">Spend Authorization</a><a href="#card">Card and receipts</a><a href="#deposits">Deposits</a><a href="#workday">Workday</a></div>
+      <div><h4>Contact</h4><p>ASG Funding Committee<br>asgfunding@miamioh.edu</p><p>Accounts Payable<br>107 Roudebush Hall, Oxford, OH 45056</p></div>
+    </div>
+    <div class="sf-legal"><span>Rules sourced from the ASG Funding Committee Standing Rules 2025–2026, the ASG Club Funding Proposal and SEA Student Org Finance Training.</span><span>Student-built for Redhawk Builds 2026. Not an official Miami University website.</span></div>
+  </div></footer>`;
+}
 function render() {
   if (S.mode === "real" && !S.orgs.length && S.role !== "asg") { renderSetupShell(); return; }
   const role = S.role, nav = NAV[role];
   if (!nav.some(n => n[0] === UI.view)) UI.view = nav[0][0];
   const o = ORG() || S.orgs[0] || {};
   const badge = v => {
-    let n = 0, cls = "";
-    if (v === "card") n = S.txns.filter(t => t.orgId === o.id && !t.receiptDone).length + S.spend.filter(x => x.orgId === o.id && x.kind === "SA" && x.status === "approved").length, cls = "amber";
-    if (v === "deposits") n = S.deposits.filter(d => d.orgId === o.id && evaluateDeposit(d).level === "deny").length, cls = "red";
-    if (v === "help") n = S.threads.filter(t => t.orgId === o.id && t.unread).length;
+    let n = 0;
+    if (v === "card") n = S.txns.filter(t => t.orgId === o.id && !t.receiptDone).length + S.spend.filter(x => x.orgId === o.id && x.kind === "SA" && x.status === "approved").length;
+    if (v === "deposits") n = S.deposits.filter(d => d.orgId === o.id && evaluateDeposit(d).level === "deny").length;
     if (v === "advq") n = S.spend.filter(s => s.status === "advisor").length;
     if (v === "review") n = S.proposals.filter(p => p.status === "review").length;
     if (v === "sareview") n = S.spend.filter(s => s.status === "review").length;
-    if (v === "inbox") n = S.threads.filter(t => t.status === "open").length, cls = "amber";
-    return n ? `<b class="nb ${cls}">${n}</b>` : "";
+    if (v === "inbox") n = S.threads.filter(t => t.status === "open").length;
+    return n ? ` <b class="nb">${n}</b>` : "";
   };
   const initials = x => String(x || "?").replace(/^Miami University /, "").split(/\s+/).filter(w => /^[A-Z]/.test(w)).slice(0, 2).map(w => w[0]).join("") || "?";
-  const me = role === "treasurer" ? (o.treasurer || "Treasurer") : role === "advisor" ? "Advisor" : "ASG Financial Services";
-  const groupHead = role === "treasurer"
-    ? `<div class="grp"><div class="grp-av">${esc(initials(o.name))}</div><div class="grp-t"><small>Group admin</small>${S.orgs.length > 1 ? `<select data-a2="pickOrg" class="grp-sel">${S.orgs.map(x => `<option value="${x.id}" ${x.id === o.id ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select>` : `<b>${esc(o.name)}</b>`}<span>Tier ${TIER_ROMAN[o.tier] || "?"} · ${esc(o.worktag || "")}</span></div></div>`
-    : `<div class="grp"><div class="grp-av alt">${role === "asg" ? "ASG" : "ADV"}</div><div class="grp-t"><small>${role === "asg" ? "Office admin" : "Advisor"}</small><b>${role === "advisor" ? "Org advisors" : "ASG Funding + Accounts Payable"}</b><span>${S.orgs.length} organizations</span></div></div>`;
-  $("#app").innerHTML = `
-  <header class="topbar">
-    <a class="tb-brand" href="#${nav[0][0]}"><span class="tb-logo">F</span><span><b>FundPath</b><small>for Miami Central</small></span></a>
-    <nav class="tb-nav"><a href="#${role === "treasurer" ? "home" : nav[0][0]}" class="on">Funding</a><a href="#help">Help</a><a href="#resources">Resources</a><a href="#rules">Rules</a></nav>
-    <div class="tb-search"><input placeholder="Search rules, events, authorizations…" data-a2="search" value="${esc(UI.q || "")}"></div>
-    <div class="tb-right">
-      <div class="seg" title="Switch view (demo)">${[["treasurer", "Treasurer"], ["advisor", "Advisor"], ["asg", "ASG / AP"]].map(([r, l]) => `<button class="${role === r ? "on" : ""}" data-a="role" data-r="${r}">${l}</button>`).join("")}</div>
-      <span class="mode ${S.mode === "real" ? "real" : ""}" data-a="modeMenu" title="Data">${S.mode === "real" ? "My club data" : "Demo data"}</span>
-      <span class="tb-av" title="${esc(me)}">${esc(initials(me))}</span>
-    </div>
-  </header>
-  <div class="shell">
-  <aside class="side">
-    ${groupHead}
-    <nav>${nav.map(([v, l]) => `<a href="#${v}" class="${UI.view === v ? "on" : ""}">${l}${badge(v)}</a>`).join("")}</nav>
-    <div class="sidefoot"><button class="link" data-a="${S.mode === "real" ? "modeMenu" : "reset"}">${S.mode === "real" ? "Back up or switch data" : "Reset demo data"}</button><small>${esc(S.settings.semester)} · ${esc(S.settings.cycle || "")} closes ${fmtD(S.settings.window.close)}</small></div>
-  </aside>
-  <main id="main"><div class="crumbs">Miami Central <span>/</span> ${role === "treasurer" ? esc(o.name || "") : role === "asg" ? "ASG Funding Committee" : "Advisors"} <span>/</span> ${esc((nav.find(n => n[0] === UI.view) || ["", ""])[1])}</div>${role === "treasurer" && o.id ? cardReadyBanner(o) : ""}${VIEWS[UI.view]()}
-  <footer class="foot"><div><b>FundPath</b> · ASG funding and student organization spending</div><div>Rules sourced from the ASG Funding Committee Standing Rules 2025–2026, the ASG Club Funding Proposal, and SEA Student Org Finance Training. Questions: asgfunding@miamioh.edu · Accounts Payable, 107 Roudebush Hall.</div><div class="muted">Student-built for Redhawk Builds 2026. Not an official Miami University system.</div></footer></main>
-  </div>
+  const tabs = nav.filter(([v]) => !(role === "treasurer" && TOP_ONLY.includes(v)));
+  const pageLabel = (nav.find(n => n[0] === UI.view) || ["", ""])[1];
+  const groupName = role === "treasurer" ? o.name : role === "asg" ? "ASG Funding Committee and Accounts Payable" : "Organization Advisors";
+  const band = `<section class="gband"><div class="wrap">
+      <div class="crumbs"><a href="https://miamicentral.miamioh.edu" target="_blank" rel="noopener">Miami Central</a><span>›</span>${esc(groupName || "")}<span>›</span>${esc(pageLabel)}</div>
+      <div class="g-row"><div class="g-logo ${role !== "treasurer" ? "alt" : ""}">${role === "treasurer" ? esc(initials(o.name)) : role === "asg" ? "ASG" : "ADV"}</div>
+        <div class="g-id">${role === "treasurer" && S.orgs.length > 1 ? `<select data-a2="pickOrg" class="g-sel" aria-label="Organization">${S.orgs.map(x => `<option value="${x.id}" ${x.id === o.id ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select>` : `<h2 class="g-name">${esc(groupName || "")}</h2>`}
+          <p>${role === "treasurer" ? `Tier ${TIER_ROMAN[o.tier] || "?"} · ${money(S.settings.tierMax[o.tier] || 0)} per semester · Worktag ${esc(o.worktag || "")} · Treasurer ${esc(o.treasurer || "")} · Advisor ${esc(o.advisor || "")}` : `${S.orgs.length} student organizations · ${esc(S.settings.semester)} ${esc(S.settings.cycle || "")}`}</p></div>
+        <div class="g-term"><span>${esc(S.settings.semester)} ${esc(S.settings.cycle || "")}</span><b>Proposals close ${fmtD(S.settings.window.close)}</b></div></div>
+      <nav class="gtabs">${tabs.map(([v, l]) => `<a href="#${v}" class="${UI.view === v ? "on" : ""}">${l}${badge(v)}</a>`).join("")}</nav>
+    </div></section>`;
+  $("#app").innerHTML = `${siteHeader(role, o)}${band}
+  <main id="main" class="wrap">${role === "treasurer" && o.id ? cardReadyBanner(o) : ""}${VIEWS[UI.view]()}</main>
+  ${siteFooter()}
   ${voiceDock()}
   ${UI.modal ? `<div class="scrim" data-a="closeModal"></div><div class="modal">${UI.modal()}</div>` : ""}`;
 }
@@ -573,6 +588,7 @@ document.addEventListener("submit", e => { const f = e.target.closest("[data-a2]
 function val(el) { return el.type === "checkbox" ? el.checked : el.type === "number" ? (el.value === "" ? 0 : +el.value) : el.value; }
 function onField(e, full) {
   const el = e.target;
+  if (el.dataset.a2 === "pickRole") { A.role({ r: el.value }); return; }
   if (el.dataset.a2 === "pickOrg") { S.orgId = el.value; UI.threadId = null; UI.saId = null; save(); render(); return; }
   const d = el.dataset;
   if (d.f) {
