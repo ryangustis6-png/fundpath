@@ -1,0 +1,1218 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>RedHawk Finance</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: sticky top bar with role switch; org view = step rail (7 steps from the team's desired flow) + work area + side panel; ASG/AP views = queue + detail. */
+:root{
+  --bg:#f6f3f2; --surface:#ffffff; --surface-2:#fbf9f8; --ink:#1d1718; --muted:#6b6264; --line:#e4dcda;
+  --accent:#b0142b; --accent-soft:#f8e4e6; --accent-ink:#ffffff;
+  --ok:#1d7346; --ok-soft:#e3f2e9; --warn:#9a5800; --warn-soft:#fbefd9; --bad:#b3261e; --bad-soft:#fbe5e3; --info:#2b5c8a; --info-soft:#e4eef8;
+  --f-display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --f-body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141011; --surface:#1e1819; --surface-2:#191415; --ink:#f2ecea; --muted:#a99fa0; --line:#362d2e;
+  --accent:#e4485f; --accent-soft:#3a1a20; --accent-ink:#ffffff;
+  --ok:#5cc792; --ok-soft:#173226; --warn:#e5a54d; --warn-soft:#3a2a12; --bad:#f2786d; --bad-soft:#3d1a17; --info:#86b6e6; --info-soft:#162637;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141011; --surface:#1e1819; --surface-2:#191415; --ink:#f2ecea; --muted:#a99fa0; --line:#362d2e;
+  --accent:#e4485f; --accent-soft:#3a1a20; --accent-ink:#ffffff;
+  --ok:#5cc792; --ok-soft:#173226; --warn:#e5a54d; --warn-soft:#3a2a12; --bad:#f2786d; --bad-soft:#3d1a17; --info:#86b6e6; --info-soft:#162637;
+  color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+h1,h2,h3,h4{font-family:var(--f-display);margin:0;text-wrap:balance;line-height:1.2}
+h2{font-size:1.35rem;font-weight:800}
+h3{font-size:1.05rem;font-weight:700}
+p{margin:0}
+a{color:var(--accent)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--f-mono);font-size:.86em}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.small{font-size:.86rem}
+.eyebrow{font-family:var(--f-display);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+
+/* top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--surface);border-bottom:1px solid var(--line)}
+.top-in{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1360px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto}
+.mark{width:30px;height:30px;border-radius:7px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-family:var(--f-display);font-weight:800;font-size:15px}
+.brand b{font-family:var(--f-display);font-weight:800;font-size:1.08rem}
+.brand span{display:block;font-size:.76rem;color:var(--muted);line-height:1.1}
+.seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;padding:6px 12px;border-radius:999px;cursor:pointer;font-weight:600;font-size:.88rem;color:var(--muted);display:flex;gap:6px;align-items:center}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.badge{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:var(--accent-ink);font-size:.72rem;display:inline-grid;place-items:center;font-weight:700}
+.seg button[aria-pressed="true"] .badge{background:var(--accent-ink);color:var(--accent)}
+.store{font-size:.78rem;color:var(--muted);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.dot.on{background:var(--ok)}
+
+.wrap{max-width:1360px;margin:0 auto;padding-block:20px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.grid-org{display:grid;grid-template-columns:200px minmax(0,1fr) 290px;gap:20px;align-items:start}
+@media (max-width:1180px){.grid-org{grid-template-columns:210px minmax(0,1fr)}.side{grid-column:1/-1}}
+@media (max-width:760px){.grid-org{grid-template-columns:minmax(0,1fr)}}
+
+/* step rail */
+.rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + 70px);display:flex;flex-direction:column;gap:4px}
+@media (max-width:760px){.rail{position:static;flex-direction:row;overflow-x:auto;padding-bottom:4px}}
+.step{display:grid;grid-template-columns:26px 1fr;gap:4px 10px;align-items:center;text-align:left;border:1px solid transparent;background:transparent;border-radius:var(--r);padding:8px 10px;cursor:pointer;min-width:0}
+@media (max-width:760px){.step{min-width:170px}}
+.step:hover{background:var(--surface)}
+.step[aria-current="step"]{background:var(--surface);border-color:var(--line)}
+.step .n{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:.82rem;color:var(--muted);grid-row:span 2}
+.step.done .n{background:var(--ok);border-color:var(--ok);color:#fff}
+.step.now .n{border-color:var(--accent);color:var(--accent)}
+.step .t{font-weight:700;font-size:.92rem;line-height:1.2}
+.step .o{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.timer{margin-top:10px;padding:10px;border:1px dashed var(--line);border-radius:var(--r);font-size:.82rem}
+@media (max-width:760px){.timer{display:none}}
+
+/* cards */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.panel-head{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:flex-end;justify-content:space-between}
+.main{display:flex;flex-direction:column;gap:16px;min-width:0}
+.side{display:flex;flex-direction:column;gap:16px;min-width:0}
+.sub{border-top:1px solid var(--line);padding-top:16px;display:flex;flex-direction:column;gap:12px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px 14px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted);font-weight:600;min-width:0}
+input[type=text],input[type=number],input[type=date],input[type=email],select,textarea{width:100%;min-width:0;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:.92rem;color:var(--ink)}
+textarea{resize:vertical;min-height:90px}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:none}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:.9rem}
+.check input{margin-top:4px;accent-color:var(--accent)}
+
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer;display:inline-flex;gap:6px;align-items:center;font-size:.9rem}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.good{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn.bad{color:var(--bad);border-color:var(--bad)}
+.btn.sm{padding:4px 9px;font-size:.8rem}
+.btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+.icon-btn{border:0;background:transparent;cursor:pointer;color:var(--muted);padding:4px 6px;border-radius:6px}
+.icon-btn:hover{background:var(--surface-2);color:var(--bad)}
+
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r)}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th{font-family:var(--f-display);font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left;padding:8px 10px;background:var(--surface-2);border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:6px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td.r,th.r{text-align:right}
+td input,td select{padding:5px 7px;font-size:.86rem}
+td select{min-width:130px}
+td input[type=number]{min-width:92px}
+.tbl-wrap table.wide{min-width:820px}
+.note1{display:block;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+tfoot td{font-weight:700;background:var(--surface-2)}
+
+.pill{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:999px;font-size:.76rem;font-weight:700;white-space:nowrap}
+.p-ok{background:var(--ok-soft);color:var(--ok)}
+.p-warn{background:var(--warn-soft);color:var(--warn)}
+.p-bad{background:var(--bad-soft);color:var(--bad)}
+.p-info{background:var(--info-soft);color:var(--info)}
+.p-mute{background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
+.p-accent{background:var(--accent-soft);color:var(--accent)}
+
+.issue{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;padding:10px 12px;border-radius:var(--r);border:1px solid var(--line);background:var(--surface-2)}
+.issue .src{font-size:.76rem;color:var(--muted)}
+.issue.error{border-color:color-mix(in srgb,var(--bad) 40%,var(--line))}
+.issue.review{border-color:color-mix(in srgb,var(--warn) 40%,var(--line))}
+.issues{display:flex;flex-direction:column;gap:8px}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.stat{border:1px solid var(--line);border-radius:var(--r);padding:12px;background:var(--surface-2)}
+.stat .v{font-family:var(--f-display);font-weight:800;font-size:1.35rem;font-variant-numeric:tabular-nums}
+.stat .k{font-size:.78rem;color:var(--muted)}
+.meter{height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--ok)}
+.meter i.over{background:var(--bad)}
+.meter i.near{background:var(--warn)}
+.caps{display:flex;flex-direction:column;gap:10px}
+.cap{display:grid;grid-template-columns:1fr auto;gap:4px 10px;font-size:.86rem}
+.cap .meter{grid-column:1/-1}
+
+/* meeting */
+.meeting{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.transcript{border:1px solid var(--line);border-radius:var(--r);background:var(--surface-2);max-height:340px;overflow:auto;padding:6px}
+.utt{display:grid;grid-template-columns:34px 1fr;gap:10px;padding:8px;border-radius:8px}
+.utt.on{background:var(--accent-soft)}
+.av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-weight:800;color:#fff;font-size:.82rem}
+.utt .who{font-size:.78rem;color:var(--muted);font-weight:600}
+.wave{display:inline-flex;gap:2px;align-items:flex-end;height:14px}
+.wave i{width:3px;background:var(--accent);border-radius:2px;animation:w 0.9s ease-in-out infinite}
+.wave i:nth-child(2){animation-delay:.15s}.wave i:nth-child(3){animation-delay:.3s}.wave i:nth-child(4){animation-delay:.45s}
+@keyframes w{0%,100%{height:4px}50%{height:14px}}
+@media (prefers-reduced-motion:reduce){.wave i{animation:none;height:8px}}
+
+/* notices */
+.notice{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:var(--r);border:1px solid var(--line);background:var(--surface)}
+.notice.hot{border-color:var(--accent);background:var(--accent-soft)}
+.notice .when{font-size:.74rem;color:var(--muted)}
+.log{display:flex;flex-direction:column;gap:0;font-size:.84rem}
+.log div{display:grid;grid-template-columns:62px 1fr;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
+.log div:last-child{border-bottom:0}
+.log .a{font-weight:700}
+
+.banner{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:14px 16px;border-radius:12px}
+.banner.ok{background:var(--ok-soft);color:var(--ok)}
+.banner.warn{background:var(--warn-soft);color:var(--warn)}
+.banner.bad{background:var(--bad-soft);color:var(--bad)}
+.banner.info{background:var(--info-soft);color:var(--info)}
+.banner b{font-family:var(--f-display)}
+.banner p{color:var(--ink)}
+
+/* queue */
+.grid-q{display:grid;grid-template-columns:320px minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:900px){.grid-q{grid-template-columns:minmax(0,1fr)}}
+.q{display:flex;flex-direction:column;gap:8px}
+.qi{display:flex;flex-direction:column;gap:6px;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:12px;cursor:pointer}
+.qi[aria-current="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.qi .row{justify-content:space-between}
+.empty{padding:30px 20px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:12px;display:flex;flex-direction:column;gap:8px;align-items:center}
+
+.checks{display:flex;flex-direction:column;gap:6px}
+.ck{display:grid;grid-template-columns:22px 1fr;gap:8px;font-size:.9rem}
+.ck .m{font-weight:800}
+.ck.ok .m{color:var(--ok)} .ck.no .m{color:var(--bad)} .ck.na .m{color:var(--warn)}
+
+.ai{border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;background:var(--surface-2);font-size:.9rem;white-space:pre-wrap}
+details summary{cursor:pointer;font-weight:600}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
+.drawer{position:fixed;right:0;top:0;bottom:0;width:min(420px,100%);background:var(--surface);border-left:1px solid var(--line);z-index:15;display:flex;flex-direction:column;padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) 16px;gap:12px;box-shadow:-10px 0 30px rgba(0,0,0,.12)}
+.drawer .body{overflow:auto;display:flex;flex-direction:column;gap:12px;flex:1}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:.88rem}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0}
+.hr{height:1px;background:var(--line)}
+</style>
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand"><div class="mark" aria-hidden="true">RF</div><div><b>RedHawk Finance</b><span>ASG funding, from meeting to card</span></div></div>
+    <div class="seg" role="group" aria-label="View as">
+      <button id="role-org" data-role="org">Org treasurer <span class="badge" id="b-org" hidden></span></button>
+      <button id="role-asg" data-role="asg">ASG Funding <span class="badge" id="b-asg" hidden></span></button>
+      <button id="role-ap" data-role="ap">Accounts Payable <span class="badge" id="b-ap" hidden></span></button>
+    </div>
+    <button class="btn sm" id="help-open">Policy help</button>
+    <div class="store" id="store"><span class="dot"></span><span>Saved in this browser</span></div>
+  </div>
+</header>
+<main class="wrap" id="app"></main>
+<aside class="drawer" id="drawer" hidden></aside>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+"use strict";
+/* ============================== RULES (all sourced) ============================== */
+const TIERS = {1:1000,2:2000,3:3000,4:5000};
+const FOOD_CAP = {1:500,2:500,3:750,4:1000};
+const SRC = {
+  tpl: "ASG Club Funding Proposal template, Step 5",
+  tpl1: "ASG Club Funding Proposal template, Step 1",
+  tpl2: "ASG Club Funding Proposal template, Steps 1–2",
+  canvasPR: "Canvas: Purchase Restrictions (8.15)",
+  canvasSA: "Canvas: Student Org Purchasing Card (9.8)",
+  canvasAcct: "Canvas: Student Org Accounts (8.5)",
+  committee: "ASG Funding Committee review criteria",
+  unverified: "Not in our sources — confirm with ASG",
+};
+const EVENT_CATS = ["Event: Food","Event: Guest Speaker","Event: Entertainer","Event: Space Fee","Event: Marketing","Event: Other","Trip: Food","Trip: Hotels","Trip: Gas","Trip: Flights","Trip: Other Travel"];
+const NONEVENT_CATS = ["Capital Item","Admin Item","Marketing","Banners","Storage"];
+const SPEND_CATS = {
+  "SC0271":"Conference Registration Fees","SC0276":"Student Travel","SC0278":"Off Campus Lodging","SC0281":"Transportation",
+  "SC0282":"Student Hospitality (Food)","SC0298":"Supplies - Books","SC0306":"Giveaway shirts / Uniform Purchases",
+  "SC0309":"Supplies - Office Supplies (Event Supplies/Decorations)","SC0331":"Inventory Purchases - Food Supplies (Food for Event)",
+  "SC0335":"Advertising","SC0336":"Dues and Membership","SC0337":"Printing and Copying","SC0338":"Facility (licenses and permits)",
+  "SC0346":"Facilitators, Instructors, and Speakers (Entertainment)","SC0373":"Car and Truck Rental","SC0399":"Facility (on-campus rental)",
+  "SC0497":"Events - Students","SC0509":"Transportation - Student","FUEL":"Car Fuel (code not printed in course)"
+};
+/* proposed ASG category -> Workday spend category; `sure:false` = confirm with SEA */
+const CAT_MAP = {
+  "Event: Food":{sc:"SC0282",sure:true},"Trip: Food":{sc:"SC0282",sure:true},
+  "Event: Guest Speaker":{sc:"SC0346",sure:true},"Event: Entertainer":{sc:"SC0346",sure:true},
+  "Event: Space Fee":{sc:"SC0497",sure:false},"Event: Marketing":{sc:"SC0335",sure:true},"Event: Other":{sc:"SC0497",sure:false},
+  "Trip: Hotels":{sc:"SC0278",sure:true},"Trip: Gas":{sc:"FUEL",sure:true},"Trip: Flights":{sc:"SC0276",sure:true},"Trip: Other Travel":{sc:"SC0281",sure:true},
+  "Capital Item":{sc:"SC0309",sure:false},"Admin Item":{sc:"SC0309",sure:false},"Marketing":{sc:"SC0335",sure:true},"Banners":{sc:"SC0335",sure:false},"Storage":{sc:"SC0497",sure:false}
+};
+const PROHIBITED = /\b(alcohol|beer|wine|liquor|spirits|tobacco|cigar|vape|nicotine|gambl\w*|casino|lottery|raffle)\b/i;
+const CLOTHING = /\b(shirts?|t-shirts?|tees|hoodies?|jerseys?(?! mike)|apparel|hats|merch|sweatshirts?|quarter-zips?)\b/i;
+const VAGUE = /\b(misc\w*|various|stuff|general|etc|other expenses|tbd)\b/i;
+const JOURNAL = /\b(armstrong|rec center|mupd|shriver|university police)\b/i;
+
+const CONTACTS = [
+  ["ASG funding proposals, rules, caps","ASG Funding Committee","asgfunding@miamioh.edu"],
+  ["Workday access, balances, budgets","SEA student org finance","studentorgfin@miamioh.edu"],
+  ["Agency accounts, contracts, general org questions","Student Engagement & Activities (SEA), 2030 Armstrong","studentactivities@miamioh.edu · (513) 529-2266"],
+  ["Purchasing cards, Spend Authorizations, vendors, check requests","Accounts Payable, 107 Roudebush Hall","AccountsPayable@miamioh.edu · (513) 529-9200"],
+  ["Deposits, card readers, cash sales","Treasury Services","treasuryservices@miamioh.edu · (513) 529-6417"],
+  ["eMarket online payment pages","Bursar e-commerce","bur_ecommerce@miamioh.edu"],
+  ["Donations, Give to Miami, Move In Miami","University Advancement, 926 Chestnut Lane","MUDevelopment@miamioh.edu · (513) 529-5957"]
+];
+const POLICY = [
+  ["Tier caps","Per semester: Tier 1 $1,000 · Tier 2 $2,000 · Tier 3 $3,000 · Tier 4 $5,000, minus ASG funding already received this semester.",SRC.tpl],
+  ["Food cap","Event food + trip food: Tier 1–2 $500 · Tier 3 $750 · Tier 4 $1,000 per semester.",SRC.tpl],
+  ["Admin, storage, speakers","Admin items $1,000 · Storage $1,000 · Guest speakers $3,000, regardless of tier.",SRC.tpl],
+  ["Hotels and flights","Hotels up to $50 per person per night. Flights up to $300 per person round trip.",SRC.tpl],
+  ["Quotes","Quotes are required for hotels, flights and any item over $1,000.",SRC.tpl1],
+  ["Hub listing","Events and trips must be listed on the Hub (Miami Central), with names that exactly match.",SRC.tpl2],
+  ["Itemized budgets","Budgets must be broken down into specific expenses.",SRC.tpl1],
+  ["Capital vs admin","Capital items are tangible goods kept and stored more than a year. Admin items are operating costs and goods not kept more than a year.","ASG template, supporting materials"],
+  ["Prohibited purchases","No alcohol, tobacco, gambling, adult entertainment, illegal products, or anything conflicting with university policy or trademarks. Never use the 'Food and Dining Alcohol' category.",SRC.canvasPR],
+  ["ASG funds worktags","ASG and other designated funds use Fund FD1000 / Program PRG040. Agency funds use FD9001 / PRG100.",SRC.canvasAcct],
+  ["Spend Authorization","Request card funds once per semester per account type. Never tick Cash Advance. One accounting string per authorization. Attach budget proof. Never resubmit an approved authorization. None accepted after June 1.",SRC.canvasSA],
+  ["Card processing","Accounts Payable fulfills within 2–3 business days after advisor approval; expediting is not guaranteed.",SRC.canvasSA],
+  ["Receipts","After funds load, answer the Receipts Questionnaire (Who/What/When/Where/How/Why) for each transaction, then close the authorization. Closing releases unused funds.","Canvas: Submit Receipt (9.9)"],
+  ["Inter-university charges","Armstrong rooms, Rec Center, MUPD and similar are journal transfers, not card purchases.",SRC.canvasSA],
+  ["Rentals","Drivers 18–20 must use Hertz; 21+ may use Hertz or Enterprise. One card per rental vehicle covers rental plus fuel.","Canvas: Transportation (8.19)"],
+  ["Contracts","Contracts for outside services should be set up at least one month ahead; SEA reviews event contracts before signing.","Canvas: Contracting (8.20)"],
+  ["Tier status","Tier status does not grant money by itself; you still apply through the ASG proposal.","Canvas announcement, Oct 21 2024"],
+  ["Review time","ASG says to expect a response within 10 academic days of submitting the Google Form.","ASG template, Step 6"]
+];
+
+/* ============================== UTIL ============================== */
+const $ = (s,el=document)=>el.querySelector(s);
+const $$ = (s,el=document)=>[...el.querySelectorAll(s)];
+const uid = ()=>Math.random().toString(36).slice(2,9);
+const SESSION = uid()+uid();
+const esc = s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const cents = n=>Math.round((Number(n)||0)*100);
+const money = (n,opt={})=>{const v=(Number(n)||0);return (v<0?"−":"")+"$"+Math.abs(v).toLocaleString("en-US",{minimumFractionDigits:opt.whole?0:2,maximumFractionDigits:opt.whole?0:2})};
+const sum = arr=>arr.reduce((a,b)=>a+cents(b),0)/100;
+const now = ()=>new Date().toISOString();
+const clock = iso=>{try{return new Date(iso).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}catch{return ""}};
+const day = iso=>{try{return new Date(iso).toLocaleDateString([], {month:"short",day:"numeric"})}catch{return ""}};
+function toast(msg){const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>t.hidden=true,2600)}
+function lsGet(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch{return d}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
+const NUMW = {one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,fifteen:15,twenty:20};
+const toNum = w=>{if(w==null)return 0;const x=String(w).toLowerCase();return NUMW[x]??(parseFloat(x.replace(/[$,]/g,""))||0)};
+
+/* ============================== STORE ============================== */
+const Store = {mode:"local", apps:{}, db:null, sample:null};
+const UI = {role:lsGet("rf.role","org"), appId:lsGet("rf.app",null), step:lsGet("rf.step",1), asgSel:null, apSel:null, playing:-1, aiBusy:false, help:false, helpQ:"", helpA:null};
+
+function loadLocal(){Store.apps=lsGet("rf.apps",{})||{}}
+function persistLocal(){lsSet("rf.apps",Store.apps)}
+const pending = {};
+function save(app,{now:immediate=false}={}){
+  app.updatedAt=now();
+  Store.apps[app.id]=app;
+  if(Store.mode==="shared"&&Store.db){
+    clearTimeout(pending[app.id]);
+    const go=()=>Store.db.collection("apps").doc(app.id).set({app:JSON.parse(JSON.stringify(app)),by:SESSION,at:app.updatedAt}).catch(e=>{
+      console.warn("db write failed",e);fallbackLocal("Shared saving isn't available for you on this page, so changes stay in this browser.");persistLocal();});
+    if(immediate)go(); else pending[app.id]=setTimeout(go,500);
+  } else persistLocal();
+}
+function fallbackLocal(msg){if(Store.mode!=="local"){Store.mode="local";Store.db=null;renderStore();toast(msg)}}
+function renderStore(){
+  const el=$("#store");
+  el.innerHTML = Store.mode==="shared"
+    ? `<span class="dot on"></span><span>Shared live across roles</span>`
+    : `<span class="dot"></span><span>Saved in this browser</span>`;
+}
+async function connect(){
+  if(!(window.claude&&typeof window.claude.use==="function"))return;
+  try{Store.sample=await window.claude.use("sample")}catch{Store.sample=null}
+  let db=null; try{db=await window.claude.use("db")}catch{db=null}
+  if(!db){render();return}
+  Store.db=db;
+  db.collection("apps").onSnapshot(snap=>{
+    const next={};
+    snap.docs.forEach(d=>{const v=d.data();if(v&&v.app)next[d.id]=v.app});
+    // keep local-only drafts while switching to shared for the first time
+    const firstTime = Store.mode!=="shared";
+    if(firstTime){
+      Store.mode="shared";
+      for(const [id,a] of Object.entries(Store.apps)){ if(!next[id]){ next[id]=a; db.collection("apps").doc(id).set({app:a,by:SESSION,at:a.updatedAt||now()}).catch(()=>{}) } }
+    }
+    for(const id of Object.keys(next)){ if(pending[id] && Store.apps[id]) next[id]=Store.apps[id]; }
+    Store.apps=next;
+    renderStore();
+    const active=document.activeElement;
+    const typing = active && /INPUT|TEXTAREA/.test(active.tagName) && active.type!=="checkbox";
+    if(typing){renderSide();renderBadges()} else render();
+  },err=>{console.warn(err);fallbackLocal("Live sharing stopped; working in this browser.")});
+}
+
+/* ============================== MODEL ============================== */
+function blankApp(){
+  return {
+    id:uid(), createdAt:now(), updatedAt:now(), semester:"Spring 2027",
+    org:{name:"Personal Finance Club",email:"pfclub@miamioh.edu",tier:4,president:"Maya Chen",presidentEmail:"chenm@miamioh.edu",treasurer:"Jordan Ellis",treasurerEmail:"ellisj@miamioh.edu",advisor:"Dr. R. Patel",sa:"SA10384",prior:0},
+    elig:{tier:true,treasurerTrained:true,presidentTrained:true,workday:true},
+    transcript:"", events:[], lines:[], ack:{hub:true,itemized:true,quotes:true,noGuarantee:true},
+    status:"draft", source:null,
+    asg:null, sa:null, ap:null, card:{status:"none",loaded:0,last4:""}, receipts:[], notices:[], history:[]
+  };
+}
+function cur(){return UI.appId&&Store.apps[UI.appId]||null}
+function log(app,actor,text){app.history.push({at:now(),actor,text})}
+function notify(app,to,text,hot=false){app.notices.unshift({id:uid(),at:now(),to,text,read:false,hot})}
+function eventOf(app,id){return app.events.find(e=>e.id===id)}
+function isTrip(app,line){const e=eventOf(app,line.eventId);return e&&e.type==="Trip"}
+
+/* ============================== VALIDATOR ============================== */
+function totals(app){
+  const L=app.lines;
+  const by=c=>sum(L.filter(l=>l.category===c).map(l=>l.amount));
+  const t={
+    total:sum(L.map(l=>l.amount)),
+    food:by("Event: Food")+by("Trip: Food"), admin:by("Admin Item"), storage:by("Storage"), speakers:by("Event: Guest Speaker"),
+    hotels:by("Trip: Hotels"), flights:by("Trip: Flights"),
+    events:sum(L.filter(l=>l.group==="event").map(l=>l.amount)), nonevent:sum(L.filter(l=>l.group==="nonevent").map(l=>l.amount))
+  };
+  const tier=Number(app.org.tier)||0;
+  t.tierMax=(TIERS[tier]||0); t.cap=Math.max(0,t.tierMax-(Number(app.org.prior)||0));
+  t.foodCap=FOOD_CAP[tier]||0;
+  t.hotelCap=50*app.events.filter(e=>e.type==="Trip").reduce((a,e)=>a+(Number(e.people)||0)*(Number(e.nights)||0),0);
+  t.flightCap=300*app.events.filter(e=>e.type==="Trip").reduce((a,e)=>a+(Number(e.flightPeople)||0),0);
+  return t;
+}
+function validate(app){
+  const out=[]; const add=(sev,msg,src,extra={})=>out.push({sev,msg,src,...extra});
+  const o=app.org, t=totals(app);
+  // Step 1 info
+  if(!o.name)add("error","Organization name is missing.",SRC.tpl1);
+  for(const [k,label] of [["email","Entity email"],["presidentEmail","President email"],["treasurerEmail","Treasurer email"]]){
+    if(!o[k])add("error",`${label} is missing.`,SRC.tpl1); else if(!/@miamioh\.edu$/i.test(o[k].trim()))add("error",`${label} must end in @miamioh.edu.`,SRC.tpl1);
+  }
+  for(const [k,label] of [["president","President"],["treasurer","Treasurer"],["advisor","Advisor"]]) if(!o[k])add("error",`${label} name is missing.`,SRC.tpl1);
+  if(!/^SA1\d{4}$/.test((o.sa||"").trim()))add("error","SA number must look like SA1#### (your org's Workday worktag).",SRC.tpl1);
+  if(!TIERS[o.tier])add("error","Choose your tier status.",SRC.tpl1);
+  const a=app.ack; if(!(a.hub&&a.itemized&&a.quotes&&a.noGuarantee))add("error","Confirm the four statements in Step 1 of the proposal.",SRC.tpl1);
+  // eligibility (simulated integrations)
+  if(!app.elig.tier)add("error","Tier status isn't confirmed in Miami Central for last semester.","Canvas announcement, Oct 21 2024");
+  if(!app.elig.treasurerTrained)add("review","Treasurer hasn't finished the Canvas Student Org Finance Training.","Canvas course home page");
+  if(!app.elig.workday)add("review","Treasurer doesn't have Workday access yet; the Spend Authorization step will stall.","Canvas: Workday (8.14)");
+  // events
+  if(!app.events.length)add("error","List at least one event or trip.",SRC.tpl2);
+  for(const e of app.events){
+    if(!e.name||!e.date)add("error",`${e.type} "${e.name||"Untitled"}" needs a name and a date.`,SRC.tpl2,{eventId:e.id});
+    if(e.type==="Trip"&&(!(Number(e.people)>0)||!(Number(e.nights)>=0)))add("error",`Trip "${e.name}" needs number of people and nights.`,SRC.tpl2,{eventId:e.id});
+    if(!e.onHub)add("error",`"${e.name||"Untitled"}" isn't marked as listed on Miami Central. ASG only funds listed events.`,SRC.tpl2,{eventId:e.id});
+    if(!app.lines.some(l=>l.eventId===e.id))add("review",`"${e.name}" has no budget lines.`,SRC.tpl2,{eventId:e.id});
+  }
+  // lines
+  if(!app.lines.length)add("error","Add at least one budget line.",SRC.tpl1);
+  for(const l of app.lines){
+    const label=`"${l.item||l.category}"`;
+    if(!l.item||!(Number(l.amount)>0)||!l.category)add("error",`Line ${label} needs an item, category and amount.`,SRC.tpl1,{lineId:l.id});
+    if(l.group==="event"&&!eventOf(app,l.eventId))add("error",`Line ${label} isn't attached to an event or trip.`,SRC.tpl2,{lineId:l.id});
+    if(l.group==="event"&&l.category&&eventOf(app,l.eventId)){
+      const trip=isTrip(app,l); const tc=l.category.startsWith("Trip:");
+      if(trip!==tc)add("error",`Line ${label} uses a ${tc?"trip":"event"} category on ${trip?"a trip":"an event"}.`,SRC.tpl2,{lineId:l.id});
+    }
+    const needsQuote = l.category==="Trip: Hotels"||l.category==="Trip: Flights"||Number(l.amount)>1000;
+    if(needsQuote&&!l.quote)add("error",`Line ${label} needs a quote attached (hotels, flights and items over $1,000).`,SRC.tpl1,{lineId:l.id,fix:"quote"});
+    const text=`${l.item} ${l.note||""} ${l.vendor||""}`;
+    if(PROHIBITED.test(text))add("error",`Line ${label} looks like a prohibited purchase (${text.match(PROHIBITED)[0]}).`,SRC.canvasPR,{lineId:l.id});
+    if(CLOTHING.test(text))add("review",`Line ${label} is clothing. Miami name/logo apparel needs trademark review and may not be fundable.`,SRC.canvasSA,{lineId:l.id});
+    if(VAGUE.test(l.item||""))add("review",`Line ${label} reads as a lump sum. Break it into specific expenses.`,SRC.committee,{lineId:l.id});
+    if(JOURNAL.test(text))add("review",`Line ${label} is an on-campus charge, paid by journal transfer, not the card.`,SRC.canvasSA,{lineId:l.id});
+    if(/prize|gift card|award/i.test(text))add("review",`Line ${label} is a prize or gift. Club Sports never funds these; ASG's rule isn't in our sources.`,SRC.unverified,{lineId:l.id});
+  }
+  // caps
+  if(t.cap&&t.total>t.cap)add("error",`Total ${money(t.total)} is over your remaining Tier ${o.tier} limit of ${money(t.cap)}.`,SRC.tpl,{fix:"total"});
+  if(t.food>t.foodCap)add("error",`Food ${money(t.food)} is over the Tier ${o.tier} food cap of ${money(t.foodCap)}.`,SRC.tpl,{fix:"food"});
+  if(t.admin>1000)add("error",`Admin items ${money(t.admin)} are over the $1,000 cap.`,SRC.tpl);
+  if(t.storage>1000)add("error",`Storage ${money(t.storage)} is over the $1,000 cap.`,SRC.tpl);
+  if(t.speakers>3000)add("error",`Guest speakers ${money(t.speakers)} are over the $3,000 cap.`,SRC.tpl);
+  if(t.hotels>t.hotelCap)add("error",`Hotels ${money(t.hotels)} are over ${money(t.hotelCap)} ($50 per person per night).`,SRC.tpl,{fix:"hotel"});
+  if(t.flights>t.flightCap)add("error",`Flights ${money(t.flights)} are over ${money(t.flightCap)} ($300 per person round trip).`,SRC.tpl);
+  if(app.lines.some(l=>l.category==="Trip: Gas"))add("info","Trip gas: if you rent vehicles, file a separate RENTAL/GAS CARDS Spend Authorization (one card per vehicle). Drivers 18–20 must use Hertz.","Canvas: Transportation (8.19)");
+  if(app.lines.some(l=>["Event: Entertainer","Event: Space Fee","Event: Marketing","Marketing","Banners"].includes(l.category)))add("info","Entertainers, space fees, marketing and banners have no separate cap in the template; they count toward your tier total.",SRC.tpl);
+  const errors=out.filter(i=>i.sev==="error"), reviews=out.filter(i=>i.sev==="review"), infos=out.filter(i=>i.sev==="info");
+  return {all:out,errors,reviews,infos,t};
+}
+function autoFix(app,kind){
+  const t=totals(app);
+  if(kind==="hotel"&&t.hotels>0){const f=t.hotelCap/t.hotels;app.lines.filter(l=>l.category==="Trip: Hotels").forEach(l=>l.amount=Math.floor(Number(l.amount)*f*100)/100);log(app,"Org","Capped hotel lines at $50 per person per night");}
+  if(kind==="food"&&t.food>0){const f=t.foodCap/t.food;app.lines.filter(l=>/Food$/.test(l.category)).forEach(l=>l.amount=Math.floor(Number(l.amount)*f*100)/100);log(app,"Org","Scaled food lines to the tier food cap");}
+  if(kind==="total"&&t.total>0){const f=t.cap/t.total;app.lines.forEach(l=>l.amount=Math.floor(Number(l.amount)*f*100)/100);log(app,"Org","Scaled every line to fit the tier limit");}
+}
+
+/* ============================== MEETING + EXTRACTION ============================== */
+const VOICES = {Maya:{color:"#8a1c2b",pitch:1.1,rate:1.03},Jordan:{color:"#2b5c8a",pitch:.92,rate:1.0},Sam:{color:"#1d7346",pitch:1.0,rate:1.06}};
+const SCRIPT = [
+  ["Maya","President","Okay, let's lock in our spring ASG proposal. We're Tier 4, so the max is $5,000, and ASG hasn't given us anything yet this semester."],
+  ["Jordan","Treasurer","Event one: General Body Meetings, every week from January 27 to April 28. Catering from Jersey Mike's, $600 for the semester."],
+  ["Sam","VP Events","Event two: the Spring Speaker Series from February 3 to April 21. Three speakers at a $400 honorarium each, so $1,200."],
+  ["Sam","VP Events","Event three: the Oxford Lanes Bowling Social on February 20. Lane rental is $200."],
+  ["Maya","President","Trip: the Midwest Finance Conference in Chicago, March 12 to March 14. Eight people, two nights. The hotel quoted $65 per person per night."],
+  ["Jordan","Treasurer","For the conference we drive two vehicles, 300 miles each way. Gas at $3.20 a gallon and 25 miles per gallon comes to $153.60."],
+  ["Jordan","Treasurer","Conference meals: $25 per person per day for two days, so $400."],
+  ["Sam","VP Events","Non-event: a Canva Teams subscription for one year, $250. That's an admin item."],
+  ["Sam","VP Events","Non-event: a custom retractable banner from Vivid Tables, $196."],
+  ["Maya","President","Non-event: a branded table cover we'll keep for years, $150. That's a capital item."],
+  ["Jordan","Treasurer","All three events and the trip are already listed on Miami Central with these exact names. Let's submit."]
+];
+const scriptText = ()=>SCRIPT.map(([n,r,t])=>`${n} (${r}): ${t}`).join("\n");
+
+function parseTranscript(text){
+  const res={tier:null,prior:null,events:[],lines:[],allOnHub:false};
+  const rows=text.split(/\n+/).map(s=>s.replace(/^[A-Z][\w .'-]*\([^)]*\):\s*|^[A-Z][\w'-]*:\s(?=[A-Z])/,"").trim()).filter(Boolean);
+  let curEv=null;
+  const dateRe=/\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.? (\d{1,2})(?:\s*(?:to|through|-|–)\s*(?:(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.? )?(\d{1,2}))?/;
+  const amounts=s=>[...s.matchAll(/\$\s?([\d,]+(?:\.\d{1,2})?)/g)].map(m=>parseFloat(m[1].replace(/,/g,"")));
+  for(const row of rows){
+    const tierM=row.match(/tier\s*(\d)/i); if(tierM&&!/^(event|trip|non-event)/i.test(row)){res.tier=+tierM[1]; if(/(haven't|hasn't|nothing|zero|no funding)/i.test(row))res.prior=0; continue;}
+    if(/listed on (miami central|the hub)/i.test(row)){res.allOnHub=true;continue}
+    let m=row.match(/^(event|trip)\b[^:]*:\s*(.*)$/i);
+    if(m){
+      const type=/trip/i.test(m[1])?"Trip":"Event";
+      let rest=m[2].replace(/^the\s+/i,"");
+      const name=rest.split(/,| every | from | on | in (?=[A-Z])|\. /)[0].trim().replace(/\.$/,"");
+      const d=rest.match(dateRe); let date="";
+      if(d){date=`${d[1]} ${d[2]}`+(d[4]?` – ${d[3]?d[3]+" ":""}${d[4]}`:"")}
+      curEv={id:uid(),type,name,date,people:0,nights:0,flightPeople:0,onHub:false};
+      if(type==="Trip"){const p=rest.match(/(\w+) (?:people|members|students)/i);const n=rest.match(/(\w+) nights?/i);curEv.people=toNum(p&&p[1]);curEv.nights=toNum(n&&n[1]);const f=rest.match(/(\w+) (?:flights|plane tickets)/i);curEv.flightPeople=toNum(f&&f[1])}
+      res.events.push(curEv);
+      const hotel=rest.match(/\$([\d.]+) per person per night/i);
+      if(hotel&&curEv){res.lines.push(mkLine("event",curEv.id,"Hotel","Trip: Hotels",Number(hotel[1])*curEv.people*curEv.nights,"",`${money(hotel[1])} × ${curEv.people} people × ${curEv.nights} nights`));continue}
+      const a=amounts(rest); if(a.length) res.lines.push(...[].concat(fromSentence(rest,a,curEv)));
+      continue;
+    }
+    m=row.match(/^non-event\b[^:]*:\s*(.*)$/i);
+    if(m){
+      const rest=m[1]; const a=amounts(rest); if(!a.length)continue;
+      let item=rest.split(/,/)[0].replace(/^(a|an|the)\s+/i,"").trim(); item=item.charAt(0).toUpperCase()+item.slice(1);
+      let cat="Admin Item";
+      if(/capital|keep (it )?for years|tent|table cover|equipment/i.test(rest))cat="Capital Item";
+      else if(/banner/i.test(rest))cat="Banners"; else if(/storage/i.test(rest))cat="Storage"; else if(/flyer|marketing|advert|poster/i.test(rest))cat="Marketing";
+      res.lines.push(mkLine("nonevent",null,item.replace(/ from .*/,""),cat,a[a.length-1],vendorOf(rest),""));
+      continue;
+    }
+    const a=amounts(row);
+    if(a.length&&curEv) res.lines.push(...[].concat(fromSentence(row,a,curEv)));
+  }
+  if(res.allOnHub)res.events.forEach(e=>e.onHub=true);
+  return res;
+}
+function fromSentence(s,a,ev){
+  const trip=ev.type==="Trip"; let cat,item;
+  if(/gas|fuel|gallon/i.test(s)){cat="Trip: Gas";item="Gas (two vehicles)"}
+  else if(/flight|airfare|plane/i.test(s)){cat="Trip: Flights";item="Flights"}
+  else if(/hotel|lodging/i.test(s)){cat="Trip: Hotels";item="Hotel"}
+  else if(/cater|food|pizza|meal|dinner|lunch|breakfast|snack/i.test(s)){cat=trip?"Trip: Food":"Event: Food";item=trip?"Meals":"Catering"}
+  else if(/speaker|honorari/i.test(s)){cat="Event: Guest Speaker";item="Speaker honoraria"}
+  else if(/\bdj\b|band|entertain|perform/i.test(s)){cat="Event: Entertainer";item="Entertainer"}
+  else if(/lane|room|venue|space|rental|facility/i.test(s)){cat=trip?"Trip: Other Travel":"Event: Space Fee";item=/lane/i.test(s)?"Lane rental":"Venue rental"}
+  else if(/flyer|poster|marketing|advert/i.test(s)){cat="Event: Marketing";item="Marketing"}
+  else {cat=trip?"Trip: Other Travel":"Event: Other";item="Expense"}
+  const cnt=s.match(/(\w+) speakers? at (?:a )?\$([\d,]+)/i);
+  let note=s.length>140?s.slice(0,137)+"…":s;
+  if(cnt&&toNum(cnt[1])>1){const n=toNum(cnt[1]),each=parseFloat(cnt[2].replace(/,/g,""));return Array.from({length:n},(_,k)=>mkLine("event",ev.id,`Speaker ${k+1} honorarium`,cat,each,"",`${n} speakers × ${money(each,{whole:true})}`))}
+  return mkLine("event",ev.id,item,cat,a[a.length-1],vendorOf(s),note);
+}
+const MONTHS=/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/;
+function vendorOf(s){for(const m of s.matchAll(/from ([A-Z][\w'&]*(?: [A-Z][\w'&]*)*)/g)){if(!MONTHS.test(m[1]))return m[1]}return ""}
+function mkLine(group,eventId,item,category,amount,vendor,note){return {id:uid(),group,eventId,item,category,amount:Math.round(Number(amount)*100)/100,vendor:vendor||"",note:note||"",quote:""}}
+
+async function aiExtract(text){
+  const prompt=`You turn a student organization's meeting transcript into an ASG (Associated Student Government, Miami University) club funding proposal.
+Return ONLY JSON with this shape:
+{"tier":number|null,"prior":number|null,"events":[{"key":"e1","type":"Event"|"Trip","name":string,"date":string,"people":number,"nights":number,"flightPeople":number,"onHub":boolean}],
+ "lines":[{"group":"event"|"nonevent","eventKey":"e1"|null,"item":string,"category":string,"amount":number,"vendor":string,"note":string}]}
+Rules:
+- Event line categories (must match the event type): ${EVENT_CATS.join(", ")}.
+- Non-event categories: ${NONEVENT_CATS.join(", ")}. Capital = kept over a year; Admin = not kept over a year.
+- Compute totals the speakers state (e.g. $65 per person per night × people × nights). Use the transcript's numbers exactly; never invent a cost.
+- One line per distinct expense; item = short specific description. note = the arithmetic or quote basis.
+- onHub true only if the transcript says the events are listed on the Hub / Miami Central.
+- prior = ASG funding already received this semester if stated.
+Transcript:
+"""${text.slice(0,12000)}"""`;
+  const raw=await Store.sample.json(prompt,{modelTier:"default"});
+  const keyMap={}; const events=(raw.events||[]).map(e=>{const id=uid();keyMap[e.key]=id;return {id,type:e.type==="Trip"?"Trip":"Event",name:String(e.name||""),date:String(e.date||""),people:+e.people||0,nights:+e.nights||0,flightPeople:+e.flightPeople||0,onHub:!!e.onHub}});
+  const okCats=new Set([...EVENT_CATS,...NONEVENT_CATS]);
+  const lines=(raw.lines||[]).filter(l=>okCats.has(l.category)&&+l.amount>0).map(l=>mkLine(l.group==="nonevent"||NONEVENT_CATS.includes(l.category)?"nonevent":"event",l.group==="nonevent"?null:(keyMap[l.eventKey]||events[0]?.id||null),String(l.item||""),l.category,+l.amount,String(l.vendor||""),String(l.note||"")));
+  return {tier:raw.tier??null,prior:raw.prior??null,events,lines};
+}
+
+let speakTimer=null;
+function playMeeting(){
+  stopMeeting(true);
+  const synth=window.speechSynthesis; UI.playing=0; renderMeetingLive();
+  const voices=(synth&&synth.getVoices&&synth.getVoices())||[];
+  const en=voices.filter(v=>/^en/i.test(v.lang));
+  const pick={Maya:en[0],Jordan:en[1]||en[0],Sam:en[2]||en[0]};
+  const next=()=>{
+    if(UI.playing<0)return;
+    if(UI.playing>=SCRIPT.length){UI.playing=-1;renderMeetingLive();finishMeeting();return}
+    renderMeetingLive();
+    const [who,,line]=SCRIPT[UI.playing];
+    const advance=()=>{if(UI.playing<0)return;UI.playing++;next()};
+    if(synth&&window.SpeechSynthesisUtterance){
+      try{const u=new SpeechSynthesisUtterance(line);const v=VOICES[who];u.pitch=v.pitch;u.rate=v.rate;if(pick[who])u.voice=pick[who];u.onend=advance;u.onerror=()=>{speakTimer=setTimeout(advance,1200)};synth.speak(u);return}catch{}
+    }
+    speakTimer=setTimeout(advance,Math.min(5200,900+line.length*38));
+  };
+  next();
+}
+function stopMeeting(silent){UI.playing=-1;clearTimeout(speakTimer);try{window.speechSynthesis&&window.speechSynthesis.cancel()}catch{} if(!silent)renderMeetingLive()}
+function finishMeeting(){const app=cur();if(!app)return;app.transcript=scriptText();log(app,"Org","Exec meeting recorded (voice demo)");save(app);render()}
+
+async function generateBudget(){
+  const app=cur(); if(!app)return;
+  if(!app.transcript.trim()){toast("Play the meeting or paste a transcript first");return}
+  UI.aiBusy=true; render();
+  let r=null, how="rules";
+  if(Store.sample){try{r=await aiExtract(app.transcript);how="claude"}catch(e){console.warn("sample failed",e);r=null}}
+  if(!r||!r.lines.length){r=parseTranscript(app.transcript);how="rules"}
+  UI.aiBusy=false;
+  if(!r.lines.length){toast("Couldn't find any dollar amounts in that transcript");render();return}
+  if(r.tier)app.org.tier=r.tier; if(r.prior!=null)app.org.prior=r.prior;
+  app.events=r.events; app.lines=r.lines; app.source=how;
+  log(app,"Org",`Budget drafted from meeting (${r.lines.length} lines, ${how==="claude"?"Claude":"rules-based extraction"})`);
+  save(app); UI.step=2; lsSet("rf.step",2); render(); toast("Proposal drafted — review the flags");
+}
+
+/* ============================== WORKFLOW ACTIONS ============================== */
+function newApp(){const a=blankApp();log(a,"Org","Application started");Store.apps[a.id]=a;UI.appId=a.id;lsSet("rf.app",a.id);UI.step=1;lsSet("rf.step",1);save(a,{now:true});render()}
+function submitProposal(){
+  const app=cur(); const v=validate(app); if(v.errors.length){toast("Fix the red items first");return}
+  app.submittedAt=now();
+  if(!v.reviews.length){
+    const approved={}; app.lines.forEach(l=>approved[l.id]=Number(l.amount));
+    app.asg={decision:"auto",reviewer:"Rules engine",note:"Every line passed the ASG template's limits and required fields, so it was approved on submission. The Funding Committee can audit any auto-approval.",approved,reasons:{},at:now()};
+    app.status="approved"; log(app,"ASG","Auto-approved on submission: no rule flags");
+    notify(app,"org",`ASG approved ${money(totals(app).total)} instantly. Next: generate your Spend Authorization.`,true);
+    UI.step=4;
+  } else {
+    app.status="review"; app.asg=null; log(app,"Org","Submitted to ASG; routed to the Secretary of Treasury for review");
+    notify(app,"asg",`${app.org.name} submitted a proposal with ${v.reviews.length} item(s) to review.`,true);
+    notify(app,"org","Your proposal is with the Secretary of Treasury. You'll see the decision and every reason here.");
+    UI.step=3;
+  }
+  lsSet("rf.step",UI.step); save(app,{now:true}); render();
+}
+function buildSA(app){
+  const groups={};
+  for(const l of app.lines){
+    const amt=Number(app.asg?.approved?.[l.id]||0); if(amt<=0)continue;
+    const map=CAT_MAP[l.category]||{sc:"SC0497",sure:false};
+    const g=groups[map.sc]||(groups[map.sc]={id:uid(),sc:map.sc,sure:map.sure,amount:0,items:[]});
+    g.amount=Math.round((g.amount+amt)*100)/100; g.items.push(`${eventOf(app,l.eventId)?.name?eventOf(app,l.eventId).name+": ":""}${l.item}${l.vendor?" ("+l.vendor+")":""}`);
+  }
+  const lines=Object.values(groups).map(g=>({id:g.id,sc:g.sc,sure:g.sure,amount:g.amount,memo:g.items.join("; ")}));
+  const total=sum(lines.map(l=>l.amount));
+  const vendors=[...new Set(app.lines.map(l=>l.vendor).filter(Boolean))];
+  const evs=app.events.map(e=>`${e.name} (${e.date})`).join("; ");
+  const clothing=app.lines.some(l=>CLOTHING.test(l.item));
+  const sem=app.semester.includes("Spring")?["2027-01-20","2027-05-08"]:["2026-08-24","2026-12-12"];
+  return {description:app.card.status==="picked"?"ADD FUNDS":"NEW CARD",businessPurpose:"Student Org Card Request",company:"100 Miami University",start:sem[0],end:sem[1],
+    worktag:`${app.org.sa} ${app.org.name}`,fund:"FD1000 E&G Designated",program:"PRG040 Student Services",cashAdvance:false,lines,total,
+    justification:`ASG-approved funding for ${app.org.name}, ${app.semester}. Approved by ASG on ${day(app.asg?.at)} for ${money(total)}. Events and trips: ${evs}. Expected vendors: ${vendors.join(", ")||"see memo lines"}. ${clothing?"Includes clothing — review for Miami name/logo.":"No clothing with Miami name or logo."} Budget proof (approved ASG proposal) attached.`,
+    attachments:["ASG-approved proposal (auto-attached)","Balance report screenshot (from Workday)"],advisor:"pending",submittedAt:null};
+}
+function submitSA(){
+  const app=cur(); if(!app.sa)app.sa=buildSA(app);
+  app.sa.submittedAt=now(); app.sa.advisor="approved"; app.status="sa_submitted"; app.ap=null;
+  log(app,"Org",`Spend Authorization submitted for ${money(app.sa.total)} (sent to Workday — simulated)`);
+  log(app,"Advisor",`${app.org.advisor} approved in Workday (simulated for demo)`);
+  notify(app,"ap",`${app.org.name} Spend Authorization for ${money(app.sa.total)} is ready for review.`,true);
+  notify(app,"org","Spend Authorization is with Accounts Payable. Their stated turnaround is 2–3 business days after advisor approval.");
+  UI.step=5; lsSet("rf.step",5); save(app,{now:true}); render();
+}
+function apChecks(app){
+  const sa=app.sa; if(!sa)return [];
+  const approvedTotal=sum(Object.values(app.asg?.approved||{}));
+  const sub=new Date(sa.submittedAt||now()); const june1=new Date(sub.getMonth()>=6?sub.getFullYear()+1:sub.getFullYear(),5,1);
+  const text=sa.lines.map(l=>l.memo).join(" ");
+  return [
+    {ok:cents(sa.total)<=cents(approvedTotal),t:`Total ${money(sa.total)} is within ASG-approved ${money(approvedTotal)}`,f:`Total ${money(sa.total)} exceeds ASG-approved ${money(approvedTotal)}`},
+    {ok:!sa.cashAdvance,t:"Cash Advance not requested",f:"Cash Advance is selected — must be returned"},
+    {ok:true,t:`One accounting string: ${sa.fund} / ${sa.program}`},
+    {ok:sa.advisor==="approved",t:`Advisor ${app.org.advisor} approved`,f:"Advisor approval missing"},
+    {ok:sub<june1,t:"Submitted before June 1 cutoff",f:"After the June 1 cutoff"},
+    {ok:sa.attachments.length>0,t:"Budget proof attached",f:"No budget proof attached"},
+    {ok:!PROHIBITED.test(text),t:"No prohibited items in memos",f:"Memo mentions a prohibited item"},
+    {ok:!CLOTHING.test(text),t:"No clothing lines",f:"Clothing line — check Miami name/logo",warn:true},
+    {ok:sa.lines.every(l=>l.sure),t:"All spend categories on the confirmed list",f:"Some spend categories are proposed mappings — confirm",warn:true},
+    {ok:!sa.lines.some(l=>l.sc==="FUEL"),t:"No fuel lines",f:"Fuel line: confirm whether this needs a separate RENTAL/GAS CARDS request",warn:true}
+  ];
+}
+function apSuggestion(app){
+  const c=apChecks(app); const hard=c.filter(x=>!x.ok&&!x.warn); const soft=c.filter(x=>!x.ok&&x.warn);
+  if(hard.length)return {verdict:"Return",tone:"bad",why:hard.map(x=>x.f)};
+  return {verdict:"Approve",tone:"ok",why:soft.length?soft.map(x=>x.f+" (non-blocking)"):["Every required check passed."]};
+}
+function apDecide(app,approve,note){
+  app.ap={decision:approve?"approved":"returned",note,at:now()};
+  if(approve){
+    app.status="card_ready"; app.card={status:"ready",loaded:app.sa.total,last4:app.card.last4||""};
+    log(app,"Accounts Payable",`Approved and loaded ${money(app.sa.total)} to the card`);
+    notify(app,"org",`Your card is ready: ${money(app.sa.total)} loaded. Pick it up at Accounts Payable, 107 Roudebush Hall (501 E. High St.).`,true);
+  } else {
+    app.status="sa_returned"; app.returnedSa=app.sa; app.sa=null; log(app,"Accounts Payable",`Returned the Spend Authorization: ${note||"see notes"}`);
+    notify(app,"org",`Accounts Payable returned your Spend Authorization: ${note||"see notes"}. File a new one; don't resubmit the old one.`,true);
+  }
+  save(app,{now:true}); render();
+}
+function markPicked(app,last4){
+  app.card.status="picked"; app.card.last4=last4; app.card.pickedAt=now(); app.status="card_picked";
+  log(app,"Accounts Payable",`Card ending ${last4||"····"} picked up by ${app.org.treasurer}`);
+  notify(app,"org","Card picked up. Log each receipt as you spend so your balance stays exact.");
+  save(app,{now:true}); render();
+}
+const SAMPLE_RECEIPTS=[
+  ["2027-01-27","Bodega Catering",178.39,"Catering",25,0,"General Body Meeting catering; $25 delivery fee refunded"],
+  ["2027-02-10","Jersey Mike's Catering",203.90,"Catering",0,0,"General Body Meeting catering"],
+  ["2027-02-17","Domino's Catering",145.16,"Catering",0,0,"General Body Meeting pizza"],
+  ["2027-02-20","Oxford Lanes",191.66,"Lane rental",0,0,"Bowling social lane rental"],
+  ["2027-01-22","Canva",266.25,"Canva",0,0,"Canva Teams one-year subscription (price rose after trial)"],
+  ["2027-02-03","Mac & Joe's",136.53,null,0,30,"Dinner with guest speaker; includes $30 tip"],
+  ["2027-02-04","Kofenya",14.35,null,0,0,"Coffee with guest speaker"]
+];
+function loadSampleReceipts(app){
+  for(const [date,vendor,amount,match,refund,tip,what] of SAMPLE_RECEIPTS){
+    const line=match?app.lines.find(l=>l.item.toLowerCase().includes(match.toLowerCase())):null;
+    app.receipts.push({id:uid(),date,vendor,amount,refund,tip,lineId:line?line.id:"",who:app.org.treasurer,what,where:"Oxford, OH",why:"ASG-funded org activity",sample:true});
+  }
+  log(app,"Org",`Loaded ${SAMPLE_RECEIPTS.length} sample receipts`); save(app); render();
+}
+function ledger(app){
+  const approved=app.asg?.approved||{};
+  const rows=app.lines.filter(l=>Number(approved[l.id])>0).map(l=>{
+    const rs=app.receipts.filter(r=>r.lineId===l.id); const spent=sum(rs.map(r=>Number(r.amount)-Number(r.refund||0)));
+    return {line:l,approved:Number(approved[l.id]),spent,left:Math.round((Number(approved[l.id])-spent)*100)/100,count:rs.length};
+  });
+  const un=app.receipts.filter(r=>!r.lineId||!rows.some(x=>x.line.id===r.lineId));
+  const spent=sum(app.receipts.map(r=>Number(r.amount)-Number(r.refund||0)));
+  const approvedTotal=sum(Object.values(approved));
+  const flags=[];
+  rows.filter(r=>r.left<0).forEach(r=>flags.push({sev:"error",msg:`${r.line.item} is over its approved ${money(r.approved)} by ${money(-r.left)}. Cover the difference from agency funds or ask ASG.`}));
+  if(un.length)flags.push({sev:"review",msg:`${un.length} receipt(s) totaling ${money(sum(un.map(r=>Number(r.amount)-Number(r.refund||0))))} don't match any approved line. ASG funds must follow the approved budget.`});
+  app.receipts.filter(r=>Number(r.tip)>0).forEach(r=>flags.push({sev:"review",msg:`${r.vendor} includes a ${money(r.tip)} tip. Our sources don't say whether ASG funds tips; confirm before closing.`}));
+  if(app.card.loaded&&cents(app.card.loaded)!==cents(approvedTotal))flags.push({sev:"review",msg:`Card loaded ${money(app.card.loaded)} but ASG approved ${money(approvedTotal)}. Ask Accounts Payable which number is right.`});
+  const missingQ=app.receipts.filter(r=>!r.who||!r.what||!r.where||!r.why);
+  if(missingQ.length)flags.push({sev:"review",msg:`${missingQ.length} receipt(s) are missing Who/What/Where/Why answers for the Workday Receipts Questionnaire.`});
+  return {rows,un,spent,approvedTotal,loaded:Number(app.card.loaded)||0,flags};
+}
+
+/* ============================== RENDER: SHELL ============================== */
+function render(){
+  for(const r of ["org","asg","ap"])$("#role-"+r).setAttribute("aria-pressed",String(UI.role===r));
+  renderBadges();
+  const root=$("#app");
+  if(UI.role==="org")root.innerHTML=orgView(); else if(UI.role==="asg")root.innerHTML=asgView(); else root.innerHTML=apView();
+  renderDrawer();
+}
+function renderBadges(){
+  const apps=Object.values(Store.apps);
+  const cnt={org:0,asg:apps.filter(a=>a.status==="review").length,ap:apps.filter(a=>a.status==="sa_submitted"||a.status==="card_ready").length};
+  const a=cur(); if(a)cnt.org=a.notices.filter(n=>n.to==="org"&&!n.read).length;
+  for(const r of ["org","asg","ap"]){const b=$("#b-"+r);b.textContent=cnt[r];b.hidden=!cnt[r]}
+}
+function renderSide(){const s=$("#side");const a=cur();if(s&&a)s.innerHTML=sidePanel(a);const t=$("#totals-live");if(t&&a)t.innerHTML=totalsStrip(a);const sb=$("#submit-zone");if(sb&&a)sb.innerHTML=submitZone(a)}
+
+/* ============================== ORG VIEW ============================== */
+const STEPS=[
+  [1,"Meeting to budget","Org"],[2,"Review & submit","Org"],[3,"ASG decision","ASG"],[4,"Spend Authorization","Org"],
+  [5,"Accounts Payable","A/P"],[6,"Pick up card","Org + A/P"],[7,"Receipts & balance","Org"]
+];
+function stepState(app,n){
+  const s=app.status; const order=["draft","review","approved","partial","denied","sa_submitted","sa_returned","card_ready","card_picked"];
+  const at=order.indexOf(s);
+  const done={1:app.lines.length>0,2:s!=="draft",3:["approved","partial","sa_submitted","sa_returned","card_ready","card_picked"].includes(s),4:["sa_submitted","card_ready","card_picked"].includes(s),5:["card_ready","card_picked"].includes(s),6:s==="card_picked",7:app.receipts.length>0&&ledger(app).flags.length===0};
+  return done[n]?"done":"";
+}
+function orgView(){
+  const app=cur();
+  if(!app) return `<div class="panel" style="max-width:720px;margin:40px auto">
+    <span class="eyebrow">Treasurer workspace</span>
+    <h2>Turn your exec meeting into a funded card</h2>
+    <p class="muted">Record the budget conversation, let the proposal fill itself, catch anything ASG would deny, then move the approved budget straight into a Spend Authorization and track every receipt against it.</p>
+    <div class="row"><button class="btn primary" data-act="new">Start a spring application</button>${Object.keys(Store.apps).length?`<select id="pick-app" aria-label="Open an application"><option value="">Open existing…</option>${Object.values(Store.apps).map(a=>`<option value="${a.id}">${esc(a.org.name)} · ${esc(a.semester)} · ${statusLabel(a.status)}</option>`).join("")}</select>`:""}</div>
+    <p class="small muted">The sample org, people and meeting are fictional. Miami Central, Canvas and Workday connections are simulated in this prototype.</p></div>`;
+  const elapsed=elapsedLabel(app);
+  return `<div class="grid-org">
+    <nav class="rail" aria-label="Funding steps">
+      ${STEPS.map(([n,t,o])=>`<button class="step ${stepState(app,n)} ${UI.step===n?"now":""}" data-step="${n}" ${UI.step===n?'aria-current="step"':""}><span class="n">${stepState(app,n)==="done"?"✓":n}</span><span class="t">${t}</span><span class="o">${o}</span></button>`).join("")}
+      <div class="timer"><div class="eyebrow">Meeting to card</div><div class="num" style="font-family:var(--f-display);font-weight:800;font-size:1.2rem">${elapsed}</div><div class="muted small">Measured from this application's own log.</div></div>
+    </nav>
+    <section class="main">${orgStep(app)}</section>
+    <aside class="side" id="side">${sidePanel(app)}</aside>
+  </div>`;
+}
+function elapsedLabel(app){
+  const start=app.history[0]?.at; const end=(app.history.find(h=>/loaded/.test(h.text))||{}).at;
+  if(!start)return "—"; const ms=new Date(end||now())-new Date(start); const m=Math.floor(ms/60000), s=Math.floor(ms/1000)%60;
+  return (end?"":"Running · ")+(m>=60?`${Math.floor(m/60)} h ${m%60} min`:`${m} min ${String(s).padStart(2,"0")} s`);
+}
+function statusLabel(s){return {draft:"Draft",review:"With ASG",approved:"ASG approved",partial:"Partly approved",denied:"Denied",sa_submitted:"With Accounts Payable",sa_returned:"Returned by A/P",card_ready:"Card ready",card_picked:"Card active"}[s]||s}
+function statusPill(s){const tone={draft:"p-mute",review:"p-warn",approved:"p-ok",partial:"p-warn",denied:"p-bad",sa_submitted:"p-info",sa_returned:"p-bad",card_ready:"p-accent",card_picked:"p-ok"}[s]||"p-mute";return `<span class="pill ${tone}">${statusLabel(s)}</span>`}
+
+function sidePanel(app){
+  const v=validate(app); const t=v.t;
+  const notes=app.notices.filter(n=>n.to==="org").slice(0,4);
+  return `<div class="panel">
+    <div class="panel-head"><div><span class="eyebrow">${esc(app.semester)}</span><h3>${esc(app.org.name)}</h3></div>${statusPill(app.status)}</div>
+    ${notes.length?`<div class="issues">${notes.map(n=>`<div class="notice ${n.hot&&!n.read?"hot":""}"><div><div>${esc(n.text)}</div><div class="when">${clock(n.at)}</div></div></div>`).join("")}</div>${notes.some(n=>!n.read)?`<button class="btn sm" data-act="read-all">Mark as read</button>`:""}`:""}
+  </div>
+  <div class="panel">
+    <h3>Limits this semester</h3>
+    <div class="caps">
+      ${capRow("Tier "+(app.org.tier||"?")+" total",t.total,t.cap)}
+      ${capRow("Food (event + trip)",t.food,t.foodCap)}
+      ${capRow("Guest speakers",t.speakers,3000)}
+      ${capRow("Admin items",t.admin,1000)}
+      ${t.hotelCap||t.hotels?capRow("Hotels ($50/person/night)",t.hotels,t.hotelCap):""}
+      ${t.flightCap||t.flights?capRow("Flights ($300/person)",t.flights,t.flightCap):""}
+      ${t.storage?capRow("Storage",t.storage,1000):""}
+    </div>
+    <p class="small muted">Caps from the ASG proposal template. ASG's per-category history isn't available to us, so caps assume nothing was spent earlier this semester besides the amount you enter.</p>
+  </div>
+  <div class="panel"><h3>Activity</h3><div class="log">${app.history.slice(-8).reverse().map(h=>`<div><span class="muted num">${clock(h.at)}</span><span><span class="a">${esc(h.actor)}</span> · ${esc(h.text)}</span></div>`).join("")}</div></div>`;
+}
+function capRow(label,val,cap){
+  const pct=cap?Math.min(100,val/cap*100):(val?100:0); const cls=val>cap?"over":pct>90?"near":"";
+  return `<div class="cap"><span>${label}</span><span class="num ${val>cap?"":"muted"}" style="${val>cap?"color:var(--bad);font-weight:700":""}">${money(val,{whole:val%1===0})} / ${money(cap,{whole:true})}</span><div class="meter"><i class="${cls}" style="width:${pct}%"></i></div></div>`;
+}
+
+function orgStep(app){
+  switch(UI.step){
+    case 1:return step1(app); case 2:return step2(app); case 3:return step3(app); case 4:return step4(app);
+    case 5:return step5(app); case 6:return step6(app); default:return step7(app);
+  }
+}
+function step1(app){
+  const playing=UI.playing>=0;
+  return `<div class="panel">
+    <div class="panel-head"><div><span class="eyebrow">Step 1 · Org</span><h2>Exec meeting to proposal</h2></div><button class="btn sm" data-act="restart">New application</button></div>
+    <div class="fields">
+      ${chk("elig.tier","Tier status confirmed (Miami Central)",app.elig.tier)}
+      ${chk("elig.treasurerTrained","Treasurer finished Canvas finance training",app.elig.treasurerTrained)}
+      ${chk("elig.presidentTrained","President finished Canvas finance training",app.elig.presidentTrained)}
+      ${chk("elig.workday","Treasurer has Workday access",app.elig.workday)}
+    </div>
+    <p class="small muted">These four would come from Miami Central, Canvas and Workday. In this prototype they're simulated, so you can toggle them to see what changes.</p>
+    <div class="sub">
+      <div class="row" style="justify-content:space-between"><h3>Meeting</h3>
+        <div class="row">${playing?`<span class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i></span><button class="btn" data-act="stop">Stop</button>`:`<button class="btn primary" data-act="play">▶ Play sample exec meeting</button>`}</div></div>
+      <div class="transcript" id="tx">${SCRIPT.map(([n,r,t],i)=>`<div class="utt ${UI.playing===i?"on":""}" id="utt-${i}" ${UI.playing>=0&&i>UI.playing?'style="opacity:.45"':""}><div class="av" style="background:${VOICES[n].color}">${n[0]}</div><div><div class="who">${n} · ${r}</div><div>${esc(t)}</div></div></div>`).join("")}</div>
+      <p class="small muted">Voices use your browser's speech engine. The production version would run this as an ElevenLabs voice agent in the meeting.</p>
+    </div>
+    <div class="sub">
+      <label class="f" for="transcript">Transcript the proposal is built from (paste your own, or upload a .txt)</label>
+      <textarea id="transcript" data-bind="transcript" rows="6" placeholder="Play the sample meeting above, or paste your meeting notes. Mention events, dates, people, nights and dollar amounts.">${esc(app.transcript)}</textarea>
+      <div class="row">
+        <button class="btn primary" data-act="generate" ${UI.aiBusy?"disabled":""}>${UI.aiBusy?"Drafting proposal…":"Build my ASG proposal"}</button>
+        <button class="btn" data-act="use-script">Use sample transcript</button>
+        <label class="btn" for="tx-file">Upload .txt</label><input id="tx-file" type="file" accept=".txt,text/plain" hidden>
+        <span class="small muted">${Store.sample?"Claude reads the transcript; a rules parser is the fallback.":"Rules-based extraction (Claude isn't available in this view)."}</span>
+      </div>
+    </div>
+  </div>`;
+}
+function chk(path,label,val){return `<label class="check"><input type="checkbox" data-bind="${path}" ${val?"checked":""}> <span>${label}</span></label>`}
+function inp(path,val,opt={}){return `<input type="${opt.type||"text"}" ${opt.id?`id="${opt.id}"`:""} data-bind="${path}" value="${esc(val)}" ${opt.ph?`placeholder="${esc(opt.ph)}"`:""} ${opt.step?`step="${opt.step}"`:""} ${opt.min!=null?`min="${opt.min}"`:""} ${opt.aria?`aria-label="${esc(opt.aria)}"`:""}>`}
+function totalsStrip(app){const t=totals(app);return `<div class="stats">
+  <div class="stat"><div class="v">${money(t.total)}</div><div class="k">Total requested</div></div>
+  <div class="stat"><div class="v">${money(t.cap-t.total)}</div><div class="k">Room under Tier ${app.org.tier} limit</div></div>
+  <div class="stat"><div class="v">${money(t.events)}</div><div class="k">Events and trips</div></div>
+  <div class="stat"><div class="v">${money(t.nonevent)}</div><div class="k">Non-event</div></div></div>`}
+function submitZone(app){
+  const v=validate(app);
+  if(app.status!=="draft")return `<div class="banner info"><b>Submitted ${day(app.submittedAt)}</b><p>${statusLabel(app.status)}. Changes now go through ASG.</p></div>`;
+  return `<div class="issues">
+    ${v.errors.map(i=>issueHtml(i)).join("")}${v.reviews.map(i=>issueHtml(i)).join("")}${v.infos.map(i=>issueHtml(i)).join("")}
+    ${!v.all.length?`<div class="banner ok"><b>No flags</b><p>Nothing in ASG's template rules would deny this.</p></div>`:""}
+  </div>
+  <div class="row" style="justify-content:space-between">
+    <span class="small muted">${v.errors.length?`${v.errors.length} item(s) ASG would deny. Fix them to submit.`:v.reviews.length?`Submits to the Secretary of Treasury for a human review (${v.reviews.length} item(s)).`:"Clean proposals are approved the moment you submit."}</span>
+    <button class="btn primary" data-act="submit" ${v.errors.length?"disabled":""}>Submit to ASG</button>
+  </div>`;
+}
+function issueHtml(i){
+  const tone={error:"p-bad",review:"p-warn",info:"p-info"}[i.sev]; const word=i.label||{error:"Would be denied",review:"Needs review",info:"Note"}[i.sev];
+  let fix="";
+  if(i.fix==="hotel")fix=`<button class="btn sm" data-act="fix" data-kind="hotel">Cap hotels at the limit</button>`;
+  if(i.fix==="food")fix=`<button class="btn sm" data-act="fix" data-kind="food">Scale food to the cap</button>`;
+  if(i.fix==="total")fix=`<button class="btn sm" data-act="fix" data-kind="total">Scale every line to fit</button>`;
+  if(i.fix==="quote")fix=`<label class="btn sm" for="q-${i.lineId}">Attach quote</label><input type="file" id="q-${i.lineId}" data-quote="${i.lineId}" hidden>`;
+  return `<div class="issue ${i.sev}"><span class="pill ${tone}">${word}</span><div><div>${esc(i.msg)}</div><div class="src">${esc(i.src)}</div>${fix?`<div class="row" style="margin-top:6px">${fix}</div>`:""}</div></div>`;
+}
+function step2(app){
+  const locked=app.status!=="draft";
+  const dis=locked?"disabled":"";
+  const evOpts=e=>app.events.map(x=>`<option value="${x.id}" ${x.id===e?"selected":""}>${esc(x.name||"Untitled")}</option>`).join("");
+  const catOpts=(list,c)=>list.map(x=>`<option ${x===c?"selected":""}>${x}</option>`).join("");
+  const evLines=app.lines.filter(l=>l.group==="event"), neLines=app.lines.filter(l=>l.group==="nonevent");
+  return `<div class="panel">
+    <div class="panel-head"><div><span class="eyebrow">Step 2 · Org</span><h2>Change or submit</h2></div>${app.source?`<span class="pill p-info">Drafted by ${app.source==="claude"?"Claude":"rules parser"} from your meeting</span>`:""}</div>
+    <fieldset ${dis} style="border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:16px;min-width:0">
+    <div>
+      <h3 style="margin-bottom:8px">Club info</h3>
+      <div class="fields">
+        <label class="f">Organization ${inp("org.name",app.org.name)}</label>
+        <label class="f">Entity email ${inp("org.email",app.org.email,{type:"email"})}</label>
+        <label class="f">Tier status <select data-bind="org.tier" data-num="1">${[1,2,3,4].map(n=>`<option value="${n}" ${+app.org.tier===n?"selected":""}>Tier ${n} (${money(TIERS[n],{whole:true})}/semester max)</option>`).join("")}</select></label>
+        <label class="f">SA number ${inp("org.sa",app.org.sa,{ph:"SA1####"})}</label>
+        <label class="f">President ${inp("org.president",app.org.president)}</label>
+        <label class="f">President email ${inp("org.presidentEmail",app.org.presidentEmail,{type:"email"})}</label>
+        <label class="f">Treasurer ${inp("org.treasurer",app.org.treasurer)}</label>
+        <label class="f">Treasurer email ${inp("org.treasurerEmail",app.org.treasurerEmail,{type:"email"})}</label>
+        <label class="f">Advisor ${inp("org.advisor",app.org.advisor)}</label>
+        <label class="f">ASG funding already received this semester ($) ${inp("org.prior",app.org.prior,{type:"number",step:"0.01",min:0})}</label>
+      </div>
+      <div class="fields" style="margin-top:10px">
+        ${chk("ack.hub","Events and trips are listed on the Hub",app.ack.hub)}${chk("ack.itemized","Budget is itemized",app.ack.itemized)}
+        ${chk("ack.quotes","Quotes are attached for hotels, flights and items over $1,000",app.ack.quotes)}${chk("ack.noGuarantee","Eligibility doesn't guarantee approval",app.ack.noGuarantee)}
+      </div>
+    </div>
+    <div class="sub">
+      <div class="row" style="justify-content:space-between"><h3>Events and trips</h3><button class="btn sm" data-act="add-event">Add event or trip</button></div>
+      <div class="tbl-wrap"><table class="wide"><thead><tr><th>Type</th><th>Name (must match Miami Central)</th><th>Dates</th><th class="r">People</th><th class="r">Nights</th><th class="r">Flyers</th><th>On Hub</th><th></th></tr></thead><tbody>
+      ${app.events.map((e,i)=>`<tr>
+        <td><select data-bind="events.${i}.type" aria-label="Type"><option ${e.type==="Event"?"selected":""}>Event</option><option ${e.type==="Trip"?"selected":""}>Trip</option></select></td>
+        <td style="min-width:200px">${inp(`events.${i}.name`,e.name,{aria:"Event name"})}</td>
+        <td style="min-width:140px">${inp(`events.${i}.date`,e.date,{aria:"Dates"})}</td>
+        <td style="width:80px">${e.type==="Trip"?inp(`events.${i}.people`,e.people,{type:"number",min:0,aria:"People"}):""}</td>
+        <td style="width:80px">${e.type==="Trip"?inp(`events.${i}.nights`,e.nights,{type:"number",min:0,aria:"Nights"}):""}</td>
+        <td style="width:80px">${e.type==="Trip"?inp(`events.${i}.flightPeople`,e.flightPeople,{type:"number",min:0,aria:"People flying"}):""}</td>
+        <td><input type="checkbox" data-bind="events.${i}.onHub" ${e.onHub?"checked":""} aria-label="Listed on Miami Central"></td>
+        <td><button class="icon-btn" data-act="del-event" data-id="${e.id}" aria-label="Remove">✕</button></td></tr>`).join("")||`<tr><td colspan="8" class="muted">No events yet.</td></tr>`}
+      </tbody></table></div>
+    </div>
+    <div class="sub">
+      <div class="row" style="justify-content:space-between"><h3>Budget: events and trips</h3><button class="btn sm" data-act="add-line" data-group="event" ${app.events.length?"":"disabled"}>Add line</button></div>
+      <div class="tbl-wrap"><table class="wide"><thead><tr><th>Event / trip</th><th>Item</th><th>Category</th><th class="r">Amount</th><th>Vendor</th><th>Quote</th><th></th></tr></thead><tbody>
+      ${evLines.map(l=>{const i=app.lines.indexOf(l);return `<tr>
+        <td><select data-bind="lines.${i}.eventId" aria-label="Event">${evOpts(l.eventId)}</select></td>
+        <td style="min-width:170px">${inp(`lines.${i}.item`,l.item,{aria:"Item"})}${l.note?`<span class="small muted note1" title="${esc(l.note)}">${esc(l.note)}</span>`:""}</td>
+        <td><select data-bind="lines.${i}.category" aria-label="Category">${catOpts(EVENT_CATS,l.category)}</select></td>
+        <td style="width:110px">${inp(`lines.${i}.amount`,l.amount,{type:"number",step:"0.01",min:0,aria:"Amount"})}</td>
+        <td style="min-width:120px">${inp(`lines.${i}.vendor`,l.vendor,{aria:"Vendor"})}</td>
+        <td class="small">${l.quote?`<span class="pill p-ok" title="${esc(l.quote)}">Attached</span>`:`<label class="btn sm" for="qq-${l.id}">Attach</label><input type="file" id="qq-${l.id}" data-quote="${l.id}" hidden>`}</td>
+        <td><button class="icon-btn" data-act="del-line" data-id="${l.id}" aria-label="Remove">✕</button></td></tr>`}).join("")||`<tr><td colspan="7" class="muted">No lines yet.</td></tr>`}
+      </tbody></table></div>
+    </div>
+    <div class="sub">
+      <div class="row" style="justify-content:space-between"><h3>Budget: non-event</h3><button class="btn sm" data-act="add-line" data-group="nonevent">Add line</button></div>
+      <div class="tbl-wrap"><table><thead><tr><th>Item</th><th>Category</th><th class="r">Amount</th><th>Vendor / link</th><th>Quote</th><th></th></tr></thead><tbody>
+      ${neLines.map(l=>{const i=app.lines.indexOf(l);return `<tr>
+        <td style="min-width:200px">${inp(`lines.${i}.item`,l.item,{aria:"Item"})}</td>
+        <td><select data-bind="lines.${i}.category" aria-label="Category">${catOpts(NONEVENT_CATS,l.category)}</select></td>
+        <td style="width:110px">${inp(`lines.${i}.amount`,l.amount,{type:"number",step:"0.01",min:0,aria:"Amount"})}</td>
+        <td style="min-width:140px">${inp(`lines.${i}.vendor`,l.vendor,{aria:"Vendor"})}</td>
+        <td class="small">${l.quote?`<span class="pill p-ok">Attached</span>`:Number(l.amount)>1000?`<label class="btn sm" for="qn-${l.id}">Attach</label><input type="file" id="qn-${l.id}" data-quote="${l.id}" hidden>`:`<span class="muted">Not needed</span>`}</td>
+        <td><button class="icon-btn" data-act="del-line" data-id="${l.id}" aria-label="Remove">✕</button></td></tr>`}).join("")||`<tr><td colspan="6" class="muted">No non-event lines.</td></tr>`}
+      </tbody></table></div>
+      <p class="small muted">Capital items are tangible goods kept more than a year. Admin items are operating costs and goods not kept more than a year.</p>
+    </div>
+    </fieldset>
+    <div id="totals-live">${totalsStrip(app)}</div>
+    <div class="sub"><h3>Pre-submission check</h3><div id="submit-zone">${submitZone(app)}</div></div>
+  </div>`;
+}
+function asgDecisionBanner(app){
+  const a=app.asg;
+  if(app.status==="review")return `<div class="banner warn"><b>With the Secretary of Treasury</b><p>Flagged items need a person. Switch to the ASG Funding view to play that role.</p></div>`;
+  if(!a)return `<div class="banner info"><b>Not submitted yet</b><p>Finish Step 2 first.</p></div>`;
+  const tone=a.decision==="denied"?"bad":a.decision==="partial"?"warn":"ok";
+  const word={auto:"Approved instantly",approved:"Approved",partial:"Partly approved",denied:"Denied"}[a.decision];
+  return `<div class="banner ${tone}"><b>${word}</b><p>${money(sum(Object.values(a.approved)))} of ${money(totals(app).total)} · ${esc(a.reviewer)} · ${day(a.at)} ${clock(a.at)}</p></div>`;
+}
+function step3(app){
+  const a=app.asg;
+  const rows=a?app.lines.map(l=>{const ap=Number(a.approved[l.id]||0);const diff=ap<Number(l.amount);return `<tr><td>${esc(l.item)}</td><td class="small">${esc(l.category)}</td><td class="r num">${money(l.amount)}</td><td class="r num" style="${diff?"color:var(--warn);font-weight:700":""}">${money(ap)}</td><td class="small">${esc(a.reasons[l.id]||(diff?"":"—"))}</td></tr>`}).join(""):"";
+  return `<div class="panel">
+    <div class="panel-head"><div><span class="eyebrow">Step 3 · ASG</span><h2>ASG decision</h2></div>${statusPill(app.status)}</div>
+    ${asgDecisionBanner(app)}
+    ${a?`<p>${esc(a.note)}</p><div class="tbl-wrap"><table><thead><tr><th>Line</th><th>Category</th><th class="r">Requested</th><th class="r">Approved</th><th>Reason and policy</th></tr></thead><tbody>${rows}</tbody></table></div>
+      ${a.decision==="denied"?`<button class="btn primary" data-act="revise">Revise and resubmit</button>`:`<div class="row"><button class="btn primary" data-act="goto" data-step="4">Generate Spend Authorization</button></div>`}`:""}
+    ${app.status==="draft"&&app.asg?.decision==="returned"?"":""}
+  </div>`;
+}
+function step4(app){
+  const ready=["approved","partial","sa_returned"].includes(app.status), sent=["sa_submitted","card_ready","card_picked"].includes(app.status);
+  if(!ready&&!sent)return `<div class="panel"><span class="eyebrow">Step 4 · Org</span><h2>Spend Authorization</h2><div class="banner info"><b>Waiting on ASG</b><p>The Spend Authorization is generated from the lines ASG approves.</p></div></div>`;
+  if(!app.sa)app.sa=buildSA(app);
+  const sa=app.sa; const dis=sent?"disabled":"";
+  return `<div class="panel">
+    <div class="panel-head"><div><span class="eyebrow">Step 4 · Org</span><h2>Spend Authorization, pre-filled</h2></div>${sent?statusPill(app.status):`<span class="pill p-info">Built from ASG-approved lines</span>`}</div>
+    ${app.status==="sa_returned"?`<div class="banner bad"><b>Returned by Accounts Payable</b><p>${esc(app.ap?.note||"")} This is a new authorization; the returned one is not resubmitted.</p></div>`:""}
+    <p class="muted">Today this is a second line-by-line entry in Workday. Here it's generated from what ASG approved, grouped by Workday spend category, with the fields the Accounts Payable job aid asks for.</p>
+    <fieldset ${dis} style="border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:14px;min-width:0">
+    <dl class="kv">
+      <dt>Company</dt><dd>${sa.company}</dd>
+      <dt>Description</dt><dd><select data-bind="sa.description" aria-label="Description"><option ${sa.description==="NEW CARD"?"selected":""}>NEW CARD</option><option ${sa.description==="ADD FUNDS"?"selected":""}>ADD FUNDS</option><option ${sa.description==="RENTAL/GAS CARDS"?"selected":""}>RENTAL/GAS CARDS</option></select></dd>
+      <dt>Business purpose</dt><dd>${sa.businessPurpose}</dd>
+      <dt>Dates</dt><dd class="row"><input type="date" data-bind="sa.start" value="${sa.start}" aria-label="Start date" style="width:auto"> to <input type="date" data-bind="sa.end" value="${sa.end}" aria-label="End date" style="width:auto"></dd>
+      <dt>Worktag</dt><dd class="mono">${esc(sa.worktag)} → ${sa.fund} / ${sa.program}</dd>
+      <dt>Cash advance</dt><dd><span class="pill p-ok">No — locked</span> <span class="small muted">Ticking it returns the request and restarts approval.</span></dd>
+    </dl>
+    <div class="tbl-wrap"><table><thead><tr><th>Spend category</th><th class="r">Amount</th><th>Memo (business purpose, vendors, events)</th></tr></thead><tbody>
+      ${sa.lines.map((l,i)=>`<tr><td style="min-width:220px"><select data-bind="sa.lines.${i}.sc" aria-label="Spend category">${Object.entries(SPEND_CATS).map(([k,v])=>`<option value="${k}" ${k===l.sc?"selected":""}>${k==="FUEL"?"":k+" · "}${v}</option>`).join("")}</select>${l.sure?"":`<div class="small" style="color:var(--warn)">Proposed mapping — confirm with SEA</div>`}</td><td class="r num">${money(l.amount)}</td><td class="small" style="min-width:260px">${esc(l.memo)}</td></tr>`).join("")}
+    </tbody><tfoot><tr><td>Total</td><td class="r num">${money(sa.total)}</td><td></td></tr></tfoot></table></div>
+    <label class="f" for="sa-just">Justification ${""}<textarea id="sa-just" data-bind="sa.justification" rows="4">${esc(sa.justification)}</textarea></label>
+    <div class="row small">${sa.attachments.map(x=>`<span class="pill p-mute">📎 ${esc(x)}</span>`).join("")}</div>
+    </fieldset>
+    <div class="row" style="justify-content:space-between">
+      <div class="row"><button class="btn" data-act="copy-sa">Copy for Workday</button><span class="small muted">Pastes as tab-separated rows.</span></div>
+      ${sent?"":`<button class="btn primary" data-act="submit-sa">Submit to Workday</button>`}
+    </div>
+    <p class="small muted">Workday submission is simulated: this prototype has no Workday API access. The advisor's approval is recorded automatically for the demo.</p>
+  </div>`;
+}
+function step5(app){
+  const s=app.status;
+  if(!["sa_submitted","card_ready","card_picked","sa_returned"].includes(s))return `<div class="panel"><span class="eyebrow">Step 5 · Accounts Payable</span><h2>Accounts Payable review</h2><div class="banner info"><b>Nothing submitted yet</b><p>Submit your Spend Authorization in Step 4.</p></div></div>`;
+  const c=apChecks(app);
+  return `<div class="panel">
+    <div class="panel-head"><div><span class="eyebrow">Step 5 · Accounts Payable</span><h2>Accounts Payable review</h2></div>${statusPill(s)}</div>
+    ${s==="sa_submitted"?`<div class="banner info"><b>With Accounts Payable</b><p>Submitted ${day(app.sa.submittedAt)} ${clock(app.sa.submittedAt)}. Switch to the Accounts Payable view to play that role.</p></div>`:s==="sa_returned"?`<div class="banner bad"><b>Returned</b><p>${esc(app.ap?.note||"")}</p></div>`:`<div class="banner ok"><b>Approved and loaded</b><p>${money(app.card.loaded)} on ${day(app.ap?.at)} ${clock(app.ap?.at)}.</p></div>`}
+    <h3>What Accounts Payable checks</h3>
+    <div class="checks">${c.map(x=>`<div class="ck ${x.ok?"ok":x.warn?"na":"no"}"><span class="m">${x.ok?"✓":x.warn?"!":"✕"}</span><span>${esc(x.ok?x.t:x.f)}</span></div>`).join("")}</div>
+  </div>`;
+}
+function step6(app){
+  const st=app.card.status;
+  return `<div class="panel">
+    <div class="panel-head"><div><span class="eyebrow">Step 6 · Org + A/P</span><h2>Pick up your card</h2></div>${statusPill(app.status)}</div>
+    ${st==="ready"?`<div class="banner ok" style="align-items:flex-start"><div><b>Your card is ready · ${money(app.card.loaded)} loaded</b><p style="margin-top:4px">Accounts Payable, 107 Roudebush Hall, 501 E. High St., Oxford. Bring your Miami ID. Questions: AccountsPayable@miamioh.edu · (513) 529-9200.</p></div></div>
+      <p class="small muted">Accounts Payable marks the card as picked up from their view.</p>`
+    :st==="picked"?`<div class="banner ok"><b>Card ending ${esc(app.card.last4||"····")} is active</b><p>Picked up ${day(app.card.pickedAt)}. ${money(app.card.loaded)} loaded.</p></div><button class="btn primary" data-act="goto" data-step="7">Track receipts</button>`
+    :`<div class="banner info"><b>Not ready yet</b><p>The card is released after Accounts Payable approves the Spend Authorization.</p></div>`}
+    <div class="sub small muted">Card PIN problems and declines go to Accounts Payable. Run a declined card as credit rather than debit first (Canvas: Student Org Purchasing Cards).</div>
+  </div>`;
+}
+function step7(app){
+  if(!app.asg)return `<div class="panel"><span class="eyebrow">Step 7 · Org</span><h2>Receipts and balance</h2><div class="banner info"><b>No approved budget yet</b><p>The ledger starts from the lines ASG approves.</p></div></div>`;
+  const L=ledger(app); const remainingCard=Math.round((L.loaded-L.spent)*100)/100;
+  const lineOpts=sel=>`<option value="">Doesn't match a line</option>`+L.rows.map(r=>`<option value="${r.line.id}" ${r.line.id===sel?"selected":""}>${esc(r.line.item)} · ${esc(r.line.category)}</option>`).join("");
+  return `<div class="panel">
+    <div class="panel-head"><div><span class="eyebrow">Step 7 · Org</span><h2>Receipts and balance</h2></div><div class="row"><button class="btn sm" data-act="sample-receipts">Load sample receipts</button></div></div>
+    <div class="stats">
+      <div class="stat"><div class="v">${money(L.approvedTotal)}</div><div class="k">Approved by ASG</div></div>
+      <div class="stat"><div class="v">${money(L.loaded)}</div><div class="k">Loaded to card</div></div>
+      <div class="stat"><div class="v">${money(L.spent)}</div><div class="k">Spent (net of refunds)</div></div>
+      <div class="stat"><div class="v" style="${remainingCard<0?"color:var(--bad)":""}">${money(remainingCard)}</div><div class="k">Left on card</div></div>
+    </div>
+    ${L.flags.length?`<div class="issues">${L.flags.map(f=>issueHtml({...f,src:"",label:f.sev==="error"?"Over budget":"Check"})).join("")}</div>`:app.receipts.length?`<div class="banner ok"><b>Ready to close</b><p>Every receipt is matched and answered. Close the Spend Authorization in Workday to release unused funds.</p></div>`:""}
+    <div class="tbl-wrap"><table><thead><tr><th>Approved line</th><th class="r">Approved</th><th class="r">Spent</th><th class="r">Left</th><th style="width:28%">Used</th></tr></thead><tbody>
+      ${L.rows.map(r=>{const pct=r.approved?Math.min(100,r.spent/r.approved*100):0;return `<tr><td>${esc(r.line.item)}<div class="small muted">${esc(r.line.category)}</div></td><td class="r num">${money(r.approved)}</td><td class="r num">${money(r.spent)}</td><td class="r num" style="${r.left<0?"color:var(--bad);font-weight:700":""}">${money(r.left)}</td><td><div class="meter"><i class="${r.left<0?"over":pct>90?"near":""}" style="width:${r.left<0?100:pct}%"></i></div></td></tr>`}).join("")}
+    </tbody></table></div>
+    <div class="sub">
+      <h3>Log a receipt</h3>
+      <form id="rc-form" class="fields">
+        <label class="f">Date <input type="date" id="rc-date" required></label>
+        <label class="f">Vendor <input type="text" id="rc-vendor" required></label>
+        <label class="f">Amount ($) <input type="number" id="rc-amount" step="0.01" min="0" required></label>
+        <label class="f">Tip included ($) <input type="number" id="rc-tip" step="0.01" min="0" value="0"></label>
+        <label class="f">Budget line <select id="rc-line">${lineOpts("")}</select></label>
+        <label class="f">What and why <input type="text" id="rc-what" placeholder="Who attended, what it was for"></label>
+        <div class="row" style="align-self:end"><button class="btn primary" type="submit">Add receipt</button></div>
+      </form>
+    </div>
+    ${app.receipts.length?`<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Vendor</th><th class="r">Amount</th><th>Line</th><th>Workday questionnaire</th><th></th></tr></thead><tbody>
+      ${[...app.receipts].sort((a,b)=>b.date.localeCompare(a.date)).map(r=>{const i=app.receipts.indexOf(r);return `<tr><td class="num">${esc(r.date)}</td><td>${esc(r.vendor)}${r.sample?` <span class="pill p-mute">sample</span>`:""}${Number(r.tip)>0?` <span class="pill p-warn">tip ${money(r.tip)}</span>`:""}${Number(r.refund)>0?` <span class="pill p-info">refund ${money(r.refund)}</span>`:""}</td><td class="r num">${money(r.amount)}</td><td><select data-bind="receipts.${i}.lineId" aria-label="Budget line">${lineOpts(r.lineId)}</select></td><td class="small">${r.who&&r.what&&r.where&&r.why?`<span class="pill p-ok">Answered</span>`:`<span class="pill p-warn">Incomplete</span>`} <span class="muted">${esc(r.what||"")}</span></td><td><button class="icon-btn" data-act="del-receipt" data-id="${r.id}" aria-label="Remove">✕</button></td></tr>`}).join("")}
+    </tbody></table></div>`:`<div class="empty"><b>No receipts yet</b><span>Log each purchase as you make it, or load the sample receipts to see flags.</span></div>`}
+  </div>`;
+}
+
+/* ============================== ASG VIEW ============================== */
+function asgView(){
+  const apps=Object.values(Store.apps).filter(a=>a.status!=="draft").sort((a,b)=>(b.submittedAt||"").localeCompare(a.submittedAt||""));
+  if(!UI.asgSel||!Store.apps[UI.asgSel])UI.asgSel=(apps.find(a=>a.status==="review")||apps[0]||{}).id;
+  const sel=Store.apps[UI.asgSel];
+  return `<div class="panel-head" style="margin-bottom:16px"><div><span class="eyebrow">ASG Funding Committee</span><h2>Secretary of Treasury queue</h2></div><span class="small muted">Clean proposals are approved automatically. Only flagged ones land here.</span></div>
+  <div class="grid-q">
+    <div class="q">${apps.length?apps.map(a=>`<button class="qi" data-asg="${a.id}" aria-current="${a.id===UI.asgSel}"><div class="row"><b>${esc(a.org.name)}</b>${statusPill(a.status)}</div><div class="small muted">Tier ${a.org.tier} · ${money(totals(a).total)} · ${a.asg?.decision==="auto"?"auto-approved":validate(a).reviews.length+" flag(s)"}</div></button>`).join(""):`<div class="empty"><b>No submissions</b><span>Submit a proposal from the Org treasurer view.</span></div>`}</div>
+    <div>${sel?asgDetail(sel):""}</div>
+  </div>`;
+}
+function asgDetail(app){
+  const v=validate(app); const decided=app.status!=="review";
+  const flagsFor=id=>v.all.filter(i=>i.lineId===id&&i.sev!=="info");
+  const draft=UI.asgDraft&&UI.asgDraft.id===app.id?UI.asgDraft:(UI.asgDraft={id:app.id,approved:Object.fromEntries(app.lines.map(l=>[l.id,decided?Number(app.asg?.approved?.[l.id]||0):Number(l.amount)])),reasons:{...(app.asg?.reasons||{})},note:app.asg?.note||""});
+  return `<div class="panel">
+    <div class="panel-head"><div><span class="eyebrow">Tier ${app.org.tier} · ${esc(app.org.sa)} · submitted ${day(app.submittedAt)}</span><h2>${esc(app.org.name)}</h2></div>${statusPill(app.status)}</div>
+    <dl class="kv"><dt>Treasurer</dt><dd>${esc(app.org.treasurer)} · ${esc(app.org.treasurerEmail)}</dd><dt>Advisor</dt><dd>${esc(app.org.advisor)}</dd><dt>Events</dt><dd>${app.events.map(e=>`${esc(e.name)} <span class="muted">(${esc(e.date)})</span>${e.onHub?"":` <span class="pill p-bad">not on Hub</span>`}`).join("<br>")}</dd></dl>
+    ${v.reviews.length?`<div class="issues">${v.reviews.map(i=>issueHtml(i)).join("")}</div>`:""}
+    <div class="tbl-wrap"><table><thead><tr><th>Line</th><th>Category</th><th class="r">Requested</th><th class="r">Approve ($)</th><th>Reason shown to the org</th></tr></thead><tbody>
+      ${app.lines.map(l=>`<tr><td>${esc(l.item)}${flagsFor(l.id).length?` <span class="pill p-warn">flag</span>`:""}<div class="small muted">${esc(eventOf(app,l.eventId)?.name||"Non-event")}</div></td><td class="small">${esc(l.category)}</td><td class="r num">${money(l.amount)}</td>
+      <td style="width:120px"><input type="number" step="0.01" min="0" data-asgamt="${l.id}" value="${draft.approved[l.id]}" ${decided?"disabled":""} aria-label="Approved amount"></td>
+      <td style="min-width:200px"><input type="text" data-asgreason="${l.id}" value="${esc(draft.reasons[l.id]||"")}" placeholder="${flagsFor(l.id).length?esc(flagsFor(l.id)[0].src):"Optional"}" ${decided?"disabled":""} aria-label="Reason"></td></tr>`).join("")}
+    </tbody></table></div>
+    <label class="f" for="asg-note">Note to the org <textarea id="asg-note" data-asgnote="1" rows="3" ${decided?"disabled":""} placeholder="Explain the decision and cite the policy.">${esc(draft.note)}</textarea></label>
+    ${decided?asgDecisionBanner(app):`<div class="row" style="justify-content:space-between"><div class="row">
+      <button class="btn" data-act="asg-fill-reasons">Fill reasons from policy</button>
+      <button class="btn" data-act="asg-ai" ${Store.sample?"":"disabled"}>Draft note with Claude</button></div>
+      <div class="row"><button class="btn bad" data-act="asg-deny">Deny</button><button class="btn good" data-act="asg-approve">Approve as entered</button></div></div>`}
+    ${UI.asgAi?`<div class="ai">${esc(UI.asgAi)}</div>`:""}
+  </div>`;
+}
+function asgCommit(app,deny){
+  const d=UI.asgDraft; const approved={}; let partial=false;
+  app.lines.forEach(l=>{const v=deny?0:Math.max(0,Math.min(Number(l.amount),Number(d.approved[l.id])||0));approved[l.id]=v;if(v<Number(l.amount))partial=true});
+  const decision=deny?"denied":partial?"partial":"approved";
+  app.asg={decision,reviewer:"Secretary of Treasury",note:d.note||(deny?"Denied. See line reasons.":partial?"Approved with reductions. See line reasons.":"Approved as requested."),approved,reasons:d.reasons,at:now()};
+  app.status=decision==="denied"?"denied":decision; app.sa=null;
+  log(app,"ASG",`${{approved:"Approved",partial:"Partly approved",denied:"Denied"}[decision]} by Secretary of Treasury: ${money(sum(Object.values(approved)))}`);
+  notify(app,"org",decision==="denied"?"ASG denied your proposal. Every reason is listed in Step 3; revise and resubmit from there.":`ASG ${decision==="partial"?"partly approved":"approved"} ${money(sum(Object.values(approved)))}. Your Spend Authorization is ready to generate.`,true);
+  UI.asgDraft=null; UI.asgAi=null; save(app,{now:true}); render(); toast("Decision sent to the org");
+}
+
+/* ============================== AP VIEW ============================== */
+function apView(){
+  const apps=Object.values(Store.apps).filter(a=>a.sa&&a.sa.submittedAt).sort((a,b)=>(b.sa.submittedAt||"").localeCompare(a.sa.submittedAt||""));
+  if(!UI.apSel||!Store.apps[UI.apSel]||!Store.apps[UI.apSel].sa)UI.apSel=(apps.find(a=>a.status==="sa_submitted")||apps.find(a=>a.status==="card_ready")||apps[0]||{}).id;
+  const sel=Store.apps[UI.apSel];
+  return `<div class="panel-head" style="margin-bottom:16px"><div><span class="eyebrow">Accounts Payable · 107 Roudebush Hall</span><h2>Spend Authorization queue</h2></div><span class="small muted">The system suggests; Accounts Payable decides.</span></div>
+  <div class="grid-q">
+    <div class="q">${apps.length?apps.map(a=>`<button class="qi" data-ap="${a.id}" aria-current="${a.id===UI.apSel}"><div class="row"><b>${esc(a.org.name)}</b>${statusPill(a.status)}</div><div class="small muted">${money(a.sa.total)} · ${esc(a.sa.description)} · ${day(a.sa.submittedAt)}</div></button>`).join(""):`<div class="empty"><b>Queue is empty</b><span>Spend Authorizations appear here after an org submits one.</span></div>`}</div>
+    <div>${sel?apDetail(sel):""}</div>
+  </div>`;
+}
+function apDetail(app){
+  const sa=app.sa; const sug=apSuggestion(app); const c=apChecks(app); const open=app.status==="sa_submitted";
+  return `<div class="panel">
+    <div class="panel-head"><div><span class="eyebrow">${esc(sa.worktag)} · ${sa.fund} / ${sa.program}</span><h2>${esc(app.org.name)} · ${money(sa.total)}</h2></div>${statusPill(app.status)}</div>
+    <div class="banner ${sug.tone}"><b>Suggested: ${sug.verdict}</b><p>${sug.why.map(esc).join(" · ")}</p></div>
+    <div class="checks">${c.map(x=>`<div class="ck ${x.ok?"ok":x.warn?"na":"no"}"><span class="m">${x.ok?"✓":x.warn?"!":"✕"}</span><span>${esc(x.ok?x.t:x.f)}</span></div>`).join("")}</div>
+    <div class="tbl-wrap"><table><thead><tr><th>Spend category</th><th class="r">Amount</th><th>Memo</th></tr></thead><tbody>
+      ${sa.lines.map(l=>`<tr><td class="small">${l.sc==="FUEL"?"":`<span class="mono">${l.sc}</span> · `}${esc(SPEND_CATS[l.sc]||l.sc)}</td><td class="r num">${money(l.amount)}</td><td class="small">${esc(l.memo)}</td></tr>`).join("")}
+    </tbody><tfoot><tr><td>Total</td><td class="r num">${money(sa.total)}</td><td></td></tr></tfoot></table></div>
+    <details><summary>Justification and dates</summary><p class="small" style="margin-top:8px">${esc(sa.justification)}</p><p class="small muted">${sa.start} to ${sa.end} · ${sa.description} · ${sa.businessPurpose}</p></details>
+    ${UI.apAi&&UI.apAi.id===app.id?`<div class="ai">${esc(UI.apAi.text)}</div>`:""}
+    ${open?`<label class="f" for="ap-note">Note to the org (required to return) <input type="text" id="ap-note" placeholder="e.g. Fuel needs a separate RENTAL/GAS CARDS request"></label>
+      <div class="row" style="justify-content:space-between"><button class="btn" data-act="ap-ai" ${Store.sample?"":"disabled"}>Second opinion from Claude</button>
+      <div class="row"><button class="btn bad" data-act="ap-return">Return</button><button class="btn good" data-act="ap-approve">Approve and load ${money(sa.total)}</button></div></div>`
+    :app.status==="card_ready"?`<div class="sub"><h3>Card pickup</h3><div class="row"><label class="f" style="max-width:180px">Card last 4 <input type="text" id="ap-last4" inputmode="numeric" maxlength="4" placeholder="1234"></label><button class="btn primary" data-act="ap-picked" style="align-self:end">Mark picked up</button></div></div>`
+    :`<div class="banner ${app.status==="sa_returned"?"bad":"ok"}"><b>${app.status==="sa_returned"?"Returned":"Card active"}</b><p>${esc(app.ap?.note||"")} ${app.card.last4?"Card ending "+esc(app.card.last4)+".":""}</p></div>`}
+  </div>`;
+}
+
+/* ============================== POLICY HELP ============================== */
+function renderDrawer(){
+  const d=$("#drawer"); d.hidden=!UI.help; if(!UI.help){d.innerHTML="";return}
+  const q=UI.helpQ.toLowerCase().trim();
+  const hits=q?POLICY.filter(p=>q.split(/\s+/).some(w=>w.length>2&&(p[0]+" "+p[1]).toLowerCase().includes(w))):POLICY;
+  d.innerHTML=`<div class="row" style="justify-content:space-between"><h3>Policy help</h3><button class="btn sm" data-act="help-close">Close</button></div>
+  <form id="help-form" class="row"><input type="text" id="help-q" value="${esc(UI.helpQ)}" placeholder="e.g. Can we buy shirts with ASG money?" style="flex:1"><button class="btn primary" type="submit">Ask</button></form>
+  <div class="body">
+    ${UI.helpA?`<div class="ai">${esc(UI.helpA)}</div>`:""}
+    <p class="small muted">${Store.sample?"Claude answers only from the rules below and names the source.":"Showing matching rules (Claude isn't available in this view)."} Not official policy.</p>
+    ${hits.map(p=>`<div class="issue"><span class="pill p-info">${esc(p[0])}</span><div><div>${esc(p[1])}</div><div class="src">${esc(p[2])}</div></div></div>`).join("")||`<p class="muted">No rule matches. Try the contacts below.</p>`}
+    <div class="hr"></div><h3>Who do I ask?</h3>
+    ${CONTACTS.map(c=>`<div><div class="small muted">${esc(c[0])}</div><div><b>${esc(c[1])}</b></div><div class="mono small" style="user-select:all">${esc(c[2])}</div></div>`).join("")}
+  </div>`;
+}
+async function askPolicy(q){
+  UI.helpQ=q; UI.helpA=null; renderDrawer(); if(!q.trim()||!Store.sample)return;
+  UI.helpA="Thinking…"; renderDrawer();
+  try{
+    const r=await Store.sample(`You help Miami University student org treasurers with ASG funding and university spending rules. Answer in 2-4 plain sentences using ONLY these rules; cite the source in brackets. If the rules don't answer it, say so and name who to contact.\nRULES:\n${POLICY.map(p=>`- ${p[0]}: ${p[1]} [${p[2]}]`).join("\n")}\nCONTACTS:\n${CONTACTS.map(c=>`- ${c[0]}: ${c[1]}, ${c[2]}`).join("\n")}\nQUESTION: ${q}`,{modelTier:"quick",onText:u=>{UI.helpA=u.text;const el=$("#drawer .ai");if(el)el.textContent=u.text}});
+    UI.helpA=r.text;
+  }catch(e){UI.helpA=e&&e.code==="not_granted"?"Claude access wasn't granted for this page. The matching rules are listed below.":"Couldn't reach Claude. The matching rules are listed below."}
+  renderDrawer();
+}
+
+/* ============================== EVENTS ============================== */
+function setPath(obj,path,val){const ks=path.split(".");let o=obj;for(let i=0;i<ks.length-1;i++)o=o[ks[i]];o[ks[ks.length-1]]=val}
+function renderMeetingLive(){
+  if(UI.role!=="org"||UI.step!==1){return}
+  const tx=$("#tx"); if(!tx){render();return}
+  SCRIPT.forEach((_,i)=>{const el=$("#utt-"+i);if(!el)return;el.classList.toggle("on",UI.playing===i);el.style.opacity=(UI.playing>=0&&i>UI.playing)?".45":""});
+  const on=$("#utt-"+UI.playing); if(on)tx.scrollTop=on.offsetTop-tx.offsetTop-40;
+  const head=tx.closest(".sub").querySelector(".row .row");
+  if(head)head.innerHTML=UI.playing>=0?`<span class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i></span><button class="btn" data-act="stop">Stop</button>`:`<button class="btn primary" data-act="play">▶ Play sample exec meeting</button>`;
+}
+document.addEventListener("click",e=>{
+  const r=e.target.closest("[data-role]"); if(r){UI.role=r.dataset.role;lsSet("rf.role",UI.role);stopMeeting(true);render();window.scrollTo(0,0);return}
+  const s=e.target.closest("[data-step]"); if(s&&!s.dataset.act){UI.step=+s.dataset.step;lsSet("rf.step",UI.step);stopMeeting(true);render();return}
+  const qa=e.target.closest("[data-asg]"); if(qa){UI.asgSel=qa.dataset.asg;UI.asgDraft=null;UI.asgAi=null;render();return}
+  const qp=e.target.closest("[data-ap]"); if(qp){UI.apSel=qp.dataset.ap;render();return}
+  if(e.target.closest("#help-open")){UI.help=!UI.help;renderDrawer();return}
+  const b=e.target.closest("[data-act]"); if(!b)return;
+  const act=b.dataset.act; const app=cur();
+  const A={
+    "new":newApp, "restart":newApp,
+    "play":playMeeting, "stop":()=>stopMeeting(false),
+    "use-script":()=>{app.transcript=scriptText();save(app);render()},
+    "generate":generateBudget,
+    "fix":()=>{autoFix(app,b.dataset.kind);save(app);render()},
+    "add-event":()=>{app.events.push({id:uid(),type:"Event",name:"",date:"",people:0,nights:0,flightPeople:0,onHub:false});save(app);render()},
+    "del-event":()=>{app.events=app.events.filter(x=>x.id!==b.dataset.id);app.lines=app.lines.filter(l=>l.eventId!==b.dataset.id||l.group!=="event");save(app);render()},
+    "add-line":()=>{const g=b.dataset.group;app.lines.push(mkLine(g,g==="event"?app.events[0]?.id:null,"",g==="event"?"Event: Food":"Admin Item",0,"",""));save(app);render()},
+    "del-line":()=>{app.lines=app.lines.filter(l=>l.id!==b.dataset.id);save(app);render()},
+    "submit":submitProposal,
+    "goto":()=>{UI.step=+b.dataset.step;lsSet("rf.step",UI.step);render()},
+    "revise":()=>{app.status="draft";log(app,"Org","Reopened the proposal to revise");UI.step=2;save(app);render()},
+    "submit-sa":submitSA,
+    "copy-sa":()=>{const sa=app.sa;const txt=["Spend category\tAmount\tMemo",...sa.lines.map(l=>`${l.sc==="FUEL"?"Car Fuel":l.sc+" "+SPEND_CATS[l.sc]}\t${l.amount.toFixed(2)}\t${l.memo}`),`Justification\t\t${sa.justification}`].join("\n");
+      navigator.clipboard.writeText(txt).then(()=>toast("Copied for Workday")).catch(()=>toast("Copy blocked here; select the table instead"))},
+    "read-all":()=>{app.notices.forEach(n=>{if(n.to==="org")n.read=true});save(app);render()},
+    "sample-receipts":()=>loadSampleReceipts(app),
+    "del-receipt":()=>{app.receipts=app.receipts.filter(r=>r.id!==b.dataset.id);save(app);render()},
+    "asg-fill-reasons":()=>{const a=Store.apps[UI.asgSel];const v=validate(a);a.lines.forEach(l=>{const f=v.all.find(i=>i.lineId===l.id&&i.sev!=="info");if(f&&!UI.asgDraft.reasons[l.id])UI.asgDraft.reasons[l.id]=`${f.msg} (${f.src})`});render()},
+    "asg-approve":()=>asgCommit(Store.apps[UI.asgSel],false),
+    "asg-deny":()=>{if(!UI.asgDraft.note.trim()){toast("Add a note explaining the denial");$("#asg-note")?.focus();return}asgCommit(Store.apps[UI.asgSel],true)},
+    "asg-ai":async()=>{const a=Store.apps[UI.asgSel];const v=validate(a);UI.asgAi="Drafting…";render();
+      try{const r=await Store.sample(`Draft a short, kind note (3-5 sentences) from the ASG Secretary of Treasury to a student org about its funding proposal. Cite the policy source for each reduction. Lines (requested -> proposed approval): ${a.lines.map(l=>`${l.item} [${l.category}] $${l.amount} -> $${UI.asgDraft.approved[l.id]}`).join("; ")}. Flags: ${v.reviews.map(i=>i.msg+" ("+i.src+")").join("; ")||"none"}.`,{modelTier:"quick"});UI.asgAi=null;UI.asgDraft.note=r.text}catch(e){UI.asgAi="Couldn't reach Claude."}render()},
+    "ap-approve":()=>apDecide(Store.apps[UI.apSel],true,($("#ap-note")?.value||"").trim()),
+    "ap-return":()=>{const n=($("#ap-note")?.value||"").trim();if(!n){toast("Add a note so the org knows what to fix");$("#ap-note")?.focus();return}apDecide(Store.apps[UI.apSel],false,n)},
+    "ap-picked":()=>{const v=($("#ap-last4")?.value||"").replace(/\D/g,"").slice(0,4);markPicked(Store.apps[UI.apSel],v)},
+    "ap-ai":async()=>{const a=Store.apps[UI.apSel];UI.apAi={id:a.id,text:"Reviewing…"};render();
+      try{const r=await Store.sample(`You assist Miami University Accounts Payable reviewing a student org purchasing-card Spend Authorization. Rules: never cash advance; one accounting string; total must not exceed ASG approval ($${sum(Object.values(a.asg.approved))}); no alcohol/tobacco/gambling; clothing with Miami logo needs review; rental vehicles need a separate RENTAL/GAS CARDS request with one card per vehicle; nothing after June 1. In 3 sentences, recommend approve or return and why.\nAuthorization: ${JSON.stringify({total:a.sa.total,description:a.sa.description,lines:a.sa.lines.map(l=>({category:SPEND_CATS[l.sc],amount:l.amount,memo:l.memo})),justification:a.sa.justification})}`,{modelTier:"quick"});UI.apAi={id:a.id,text:r.text}}catch(e){UI.apAi={id:a.id,text:"Couldn't reach Claude."}}render()},
+    "help-close":()=>{UI.help=false;renderDrawer()}
+  };
+  if(A[act])A[act]();
+});
+document.addEventListener("input",e=>{
+  const el=e.target;
+  if(el.dataset.asgamt){UI.asgDraft.approved[el.dataset.asgamt]=el.value;return}
+  if(el.dataset.asgreason){UI.asgDraft.reasons[el.dataset.asgreason]=el.value;return}
+  if(el.dataset.asgnote){UI.asgDraft.note=el.value;return}
+  if(el.id==="help-q"){UI.helpQ=el.value;return}
+  const p=el.dataset.bind; if(!p)return; const app=cur(); if(!app)return;
+  if(el.type==="checkbox"||el.tagName==="SELECT")return; // handled on change
+  let v=el.value; if(el.type==="number")v=el.value===""?"":Number(el.value);
+  setPath(app,p,v); save(app); renderSide();
+});
+document.addEventListener("change",e=>{
+  const el=e.target;
+  if(el.id==="pick-app"&&el.value){UI.appId=el.value;lsSet("rf.app",el.value);render();return}
+  if(el.dataset.quote){const app=cur();const l=app.lines.find(x=>x.id===el.dataset.quote);if(l&&el.files[0]){l.quote=el.files[0].name;log(app,"Org",`Attached quote ${el.files[0].name} to ${l.item}`);save(app);render()}return}
+  if(el.id==="tx-file"&&el.files[0]){const fr=new FileReader();fr.onload=()=>{const app=cur();app.transcript=String(fr.result||"");save(app);render()};fr.readAsText(el.files[0]);return}
+  const p=el.dataset.bind; if(!p)return; const app=cur(); if(!app)return;
+  if(el.type==="checkbox")setPath(app,p,el.checked);
+  else if(el.tagName==="SELECT")setPath(app,p,el.dataset.num?Number(el.value):el.value);
+  else return;
+  if(p.startsWith("sa.lines")){/* category edits keep amounts */ app.sa.lines.forEach(l=>{l.sure=Object.values(CAT_MAP).some(m=>m.sc===l.sc&&m.sure)})}
+  save(app); render();
+});
+document.addEventListener("submit",e=>{
+  e.preventDefault();
+  if(e.target.id==="help-form"){askPolicy($("#help-q").value);return}
+  if(e.target.id==="rc-form"){const app=cur();
+    const r={id:uid(),date:$("#rc-date").value,vendor:$("#rc-vendor").value.trim(),amount:Number($("#rc-amount").value)||0,tip:Number($("#rc-tip").value)||0,refund:0,lineId:$("#rc-line").value,who:app.org.treasurer,what:$("#rc-what").value.trim(),where:"Oxford, OH",why:$("#rc-what").value.trim()?"ASG-funded org activity":""};
+    if(!r.vendor||!r.amount){toast("Add a vendor and amount");return}
+    app.receipts.push(r);log(app,"Org",`Logged ${r.vendor} ${money(r.amount)}`);save(app);render();toast("Receipt added")}
+});
+
+/* ============================== BOOT ============================== */
+loadLocal(); renderStore();
+if(UI.appId&&!Store.apps[UI.appId])UI.appId=null;
+render();
+connect();
+window.__rf={parseTranscript,validate,totals,scriptText,blankApp,buildSA,ledger,apChecks};
+</script>
+
+</body></html>
