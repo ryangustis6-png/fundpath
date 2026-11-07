@@ -2,6 +2,7 @@
 // Body: { audio: <base64>, mime: "audio/webm" }. Needs ELEVENLABS_API_KEY.
 module.exports = async (req, res) => {
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
+  if (!require('../public-config').paidServicesEnabled) return res.status(501).json({ error: "Live transcription is paused for the cost-free demo. No provider request was made." });
   const key = process.env.ELEVENLABS_API_KEY;
   if (!key) return res.status(501).json({ error: "ElevenLabs not configured" });
   try {
