@@ -1,0 +1,6 @@
+{
+  "name": "fundpath-demo",
+  "private": true,
+  "scripts": { "test": "node workflow.test.cjs", "test:browser": "node browser.test.cjs" },
+  "devDependencies": { "playwright": "1.62.1" }
+}

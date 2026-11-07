@@ -57,7 +57,7 @@ function confidenceCheck(p, org, ST, ev, sa) {
   const saEv = sa ? evaluateSpend(sa, S) : null; const st = orgStanding(org);
   const lim = ST.tierMax[org.tier] || 0;
   return [
-    { ok: ev.passed === 7 && !ev.flags.some(f => f.level === "warn" || f.level === "deny"), t: "All 7 ASG committee criteria pass with no warnings" },
+    { ok: ev.passed === 7 && !ev.flags.some(f => f.level === "warn" || f.level === "deny"), t: "All 7 configured demo ASG criteria pass with no warnings" },
     { ok: p.events.every(e => (org.hub || []).includes(e.name)), t: "Every event is registered on Miami Central under its exact name" },
     { ok: !p.events.some(e => e.type === "Trip"), t: "No overnight trips (those need a live hearing, SR §13)" },
     { ok: p.lines.every(l => !CATS[l.cat] || !(CATS[l.cat].third || CATS[l.cat].quote || l.amount > ST.quoteOver) || l.quote), t: "Written quotes for every third party, hotel, flight and item over $1,000" },
@@ -65,7 +65,7 @@ function confidenceCheck(p, org, ST, ev, sa) {
     { ok: !st.blocked && !org.debt && !(org.deficitSemesters > 0), t: "No ASG debt, deficit or penalty on record" },
     { ok: (org.readiness || {}).access === "approved", t: "Treasurer has Workday access (SEA training done)" },
     { ok: !sa || saEv.level === "ok", t: "Spend Authorization matches the approved budget line for line" },
-    { ok: !!ST.straightThrough, t: "Straight-through approval is turned on by ASG" }
+    { ok: !!ST.straightThrough, t: "Demo proposal automation setting (never bypasses AP)" }
   ];
 }
 
@@ -74,7 +74,7 @@ function confidenceCheck(p, org, ST, ev, sa) {
 // ---------------------------------------------------------------------------
 function liveBudget() {
   const m = M(); const o = ORG(); if (!m.transcript.length) return null;
-  try { const x = extractFromTranscript(m.transcript.map(([w, t]) => `${w}: ${t}`).join("\n"), o); return x; } catch (e) { return null; }
+  try { const x = extractFromTranscript(m.transcript.filter(([who]) => who !== "ElevenLabs agent").map(([w, t]) => `${w}: ${t}`).join("\n"), o); return x; } catch (e) { return null; }
 }
 function liveBudgetHtml() {
   const x = liveBudget(); if (!x || !x.lines.length) return `<p class="muted small">Line items show up here as people talk.</p>`;
@@ -106,7 +106,7 @@ function viewMeeting2() {
       <li>Run your exec meeting. Go through every event and every item and what it costs.</li>
       <li>Say <b>“FundPath, build our budget.”</b> It applies every ASG rule for Tier ${TIER_ROMAN[o.tier]} and asks out loud about anything it isn't sure of.</li>
       <li>It builds the ASG proposal and the Spend Authorizations, then asks if you want to submit.</li>
-      <li>If everything is inside the rules, it's approved on the spot and your card is ready. If not, only the uncertain items go to ASG or your advisor, with the reason.</li></ol></section>`;
+      <li>If everything is inside the rules, the demo proposal is approved and AP must decide on the card authorization. If not, only the uncertain items go to ASG or your advisor, with the reason.</li></ol></section>`;
   if (m.stage === "building") right = `<section class="card"><h2>Building your budget</h2><p class="muted">Matching events to Miami Central, sorting categories, checking Standing Rules §11 and §19…</p><div class="bar-ind"><i></i></div></section>`;
   if (b) right = `
     <section class="card assistant ${["question", "confirm"].includes(m.stage) ? "ask" : ""}">
@@ -119,7 +119,7 @@ function viewMeeting2() {
     ${m.payPlan && ["confirm", "running", "done"].includes(m.stage) ? `<section class="card"><h2>How every line gets paid</h2>${payPlanHtml(m.payPlan)}</section>` : ""}
     ${m.pipe.length ? `<section class="card"><h2>Submission</h2><ol class="pipe-v">${m.pipe.map(x => `<li class="${x.done ? (x.warn ? "warn" : "done") : "now"}"><i>${x.done ? (x.warn ? "!" : "✓") : ""}</i><div><b>${esc(x.t)}</b><span>${x.d || ""}</span></div></li>`).join("")}</ol>
       ${m.conf ? `<h3>Approval check</h3><ul class="conf">${m.conf.map(c => `<li class="${c.ok ? "ok" : "no"}"><i>${c.ok ? "✓" : "✕"}</i>${esc(c.t)}</li>`).join("")}</ul>` : ""}
-      ${m.stage === "done" ? `<div class="mf"><span class="muted small">${m.outcome === "auto" ? "Nothing else needs an approval." : "Only the items above need a person."}</span><span>${m.outcome === "auto" ? `<button class="btn" data-a="go" data-id="card">Get the card →</button>` : `<button class="btn" data-a="meetToAP">Open ASG / AP view →</button>`}</span></div>` : ""}</section>` : ""}
+      ${m.stage === "done" ? `<div class="mf"><span class="muted small">${m.outcome === "auto" ? "Proposal approved in demo; payment routes may require human review." : "Human review is required before card pickup."}</span><span>${m.outcome === "auto" ? `<button class="btn" data-a="go" data-id="card">Get the card →</button>` : `<button class="btn" data-a="meetToAP">Open ASG / AP view →</button>`}</span></div>` : ""}</section>` : ""}
     ${b.p ? `<details class="collapse card" ${["running", "done"].includes(m.stage) ? "" : ""}><summary>See the filled ASG proposal sheet and funding form</summary>${sheetPreview(b.p, o)}${formPreview(b.p, o)}</details>` : ""}`;
   return `<header class="ph"><div><p class="eyebrow">${esc(o.name)} · Tier ${TIER_ROMAN[o.tier]}</p><h1>Exec meeting</h1><p>${esc(S.settings.semester)} ${esc(S.settings.cycle || "")} · ASG proposals close ${fmtD(S.settings.window.close)} · ${money(S.settings.tierMax[o.tier])} semester limit</p></div>
     <div class="ph-actions"><label class="check vt"><input type="checkbox" data-a="voiceOn" ${VOICE.on ? "checked" : ""}> Spoken replies</label><button class="btn ghost" data-a="meetReset">New meeting</button></div></header>
@@ -165,7 +165,7 @@ Object.assign(A, {
   meetReset: () => { S.meeting = { transcript: [], built: null, stage: "idle", pipe: [] }; VOICE.playing = false; UI.demoAuto = false; save(); render(); },
   meetBuild: async () => { const m = M(); const o = ORG(); if (!m.transcript.length) return; m.stage = "building"; m.pipe = []; m.conf = null; m.payPlan = null; save(); render();
     await sleep(1200);
-    const b = aiBuildBudget(m.transcript.map(([w, t]) => `${w}: ${t}`).join("\n"), o, S.settings);
+    const b = aiBuildBudget(m.transcript.filter(([who]) => who !== "ElevenLabs agent").map(([w, t]) => `${w}: ${t}`).join("\n"), o, S.settings);
     m.built = b; m.qs = buildQuestions(b.p, o, S.settings); m.qi = 0; m.asked = m.qs.map(q => q.kind + (q.line || q.event));
     logEvt(o.id, `FundPath built a ${money(b.ev.total)} draft budget from the exec meeting`);
     if (m.qs.length) { const intro = `I've got ${b.p.lines.length} line items. ${m.qs.length === 1 ? "One question" : `${m.qs.length} quick questions`} before I build the final budget.`; m.say = intro; m.stage = "question"; save(); render(); await speak(intro); }
@@ -173,15 +173,15 @@ Object.assign(A, {
   meetAnswer: d => { const m = M(); const o = ORG(); if (m.stage !== "question") return; const q = m.qs[m.qi]; const r = answerQuestion(m.built.p, o, q, d.v);
     if (!r.ok) { speak("Sorry, can you say what it's for?"); return; }
     m.built.changes.push({ kind: "answer", what: r.note }); if (r.review) m.built.review = true; m.qi++; save(); askNext(); },
-  meetYes: async () => { const m = M(); const o = ORG(); if (m.stage !== "confirm") return; m.stage = "running"; m.pipe = []; m.conf = null; save(); render();
+  meetYes: async () => { const m = M(); const o = ORG(); if (S.role !== "treasurer" || m.stage !== "confirm") return; if (approvedProposal(S,o.id)) return toast("An approved proposal already exists. Use an amendment rather than resubmitting.", "bad"); m.stage = "running"; m.pipe = []; m.conf = null; save(); render();
     const step = async (t, d, ms = 850, warn) => { m.pipe.push({ t, d, done: false, warn }); render(); await sleep(ms); m.pipe[m.pipe.length - 1].done = true; save(); render(); };
     const p = materialize(m.built.p, o, "draft"); applyFix(p, o, { type: "ack" });
     await step("Filled out the ASG Club Funding Proposal sheet", `${p.events.length} events · ${p.lines.length} lines · ${money(p.lines.reduce((t, l) => t + +l.amount, 0))}`);
     p.status = "submitted"; p.submittedAt = todayIso();
-    await step("Submitted the ASG funding form", `From ${esc(o.entityEmail)}, approved by the exec board in the meeting`);
+    await step("Simulated ASG funding form submission", `From ${esc(o.entityEmail)}, approved by the exec board in the meeting`);
     const ev = evaluateProposal(p, o, S.settings);
     let conf = confidenceCheck(p, o, S.settings, ev, null);
-    const propOk = conf.slice(0, 7).every(c => c.ok) && !m.built.review;
+    const propOk = ev.auto && ev.award === ev.total && conf.slice(0, 7).every(c => c.ok) && !m.built.review;
     if (!propOk) {
       p.status = "review"; logEvt(o.id, `${p.id} sent to the ASG Funding Committee: ${conf.filter(c => !c.ok).map(c => c.t).join("; ")}`);
       m.conf = conf; await step("Sent to the ASG Funding Committee", `FundPath wasn't 100% sure, so a person decides: ${conf.filter(c => !c.ok).map(c => esc(c.t)).join("; ") || "items you asked ASG to review"}`, 700, true);
@@ -189,23 +189,17 @@ Object.assign(A, {
     }
     p.status = "approved"; p.decidedBy = "FundPath auto-approval"; p.decidedAt = todayIso(); p.lines.forEach(l => { l.approved = ev.lineAward[l.id] ?? +l.amount; });
     logEvt(o.id, `${p.id} auto-approved: 7/7 criteria, ${money(ev.award)}`);
-    await step("Approved: all 7 ASG criteria pass", `${money(ev.award)} · logged as a Finance & Audit recommendation for Senate (SR §3.1)`);
+    await step("Approved: all 7 ASG criteria pass", `${money(ev.award)} · Demo approval only; no institutional approval recorded`);
     const r = genSAFor(o.id); const sa = r.sa;
-    if (sa) { sa.wd = { status: "Submitted", ref: wdRef(), at: new Date().toISOString() }; sa.history.push({ at: todayIso(), who: "FundPath", action: "Created in Workday", note: `${sa.wd.ref} · built from ${p.id}` }); }
+    if (sa) { sa.wd = { status: "Submitted", ref: wdRef(), at: new Date().toISOString() }; sa.history.push({ at: todayIso(), who: "FundPath", action: "Created in demo Workday", note: `${sa.wd.ref} · built from ${p.id}` }); }
     S.spend.filter(x => x.kind === "REQ" && x.orgId === o.id && x.status === "draft").forEach(x => { x.vendor = x.vendor || x.memo; });
-    await step("Created the Workday Spend Authorization", sa ? `${sa.id} · ${sa.descr} · ${money(sa.lines.reduce((t, l) => t + spendLineAmt(l), 0))} for the card · Workday ${sa.wd.ref}` : "No card purchases in this budget");
+    await step("Created the simulated Workday Spend Authorization", sa ? `${sa.id} · ${sa.descr} · ${money(sa.lines.reduce((t, l) => t + spendLineAmt(l), 0))} for the card · Workday ${sa.wd.ref}` : "No card purchases in this budget");
     if (r.reqs) await step(`Created ${r.reqs} speaker requisition${r.reqs > 1 ? "s" : ""}`, "Speakers are paid by contract. FundPath drafted it; SEA signs the contract (university policy).");
     conf = confidenceCheck(p, o, S.settings, ev, sa); m.conf = conf;
-    if (sa && conf.every(c => c.ok)) {
-      sa.status = "approved"; sa.cardLast4 = sa.cardLast4 || String(1000 + Math.floor(Math.random() * 8999)); sa.wd.status = "Approved · card funded";
-      sa.history.push({ at: todayIso(), who: "FundPath straight-through approval", action: "Approved", note: "Matches the auto-approved proposal line for line; every check passed" });
-      logEvt(o.id, `${sa.id} approved straight through. Card ready at 107 Roudebush Hall`);
-      await step("Spend Authorization approved automatically", "Every check passed, so no advisor or Accounts Payable step was needed. The card is being loaded.");
-      m.stage = "done"; m.outcome = "auto"; save(); render();
-      speak(`Done. Your budget is approved for ${money(ev.award).replace(".00", "")}, and spend authorization ${sa.id.replace("-", " ")} is approved too. Your card is ready to pick up at Accounts Payable in Roudebush Hall.`);
-    } else if (sa) {
+    if (sa) { sa.proposalId = p.id; sa.wd.simulated = true; }
+    if (sa) {
       sa.status = "review"; sa.wd.status = "In progress · awaiting Accounts Payable"; logEvt(o.id, `${sa.id} routed to Accounts Payable: ${conf.filter(c => !c.ok).map(c => c.t).join("; ")}`);
-      await step("Routed to Accounts Payable", `Not every check passed: ${conf.filter(c => !c.ok).map(c => esc(c.t)).join("; ")}`, 700, true);
+      await step("Routed to Accounts Payable", `Human AP approval required. ${conf.filter(c => !c.ok).map(c => esc(c.t)).join("; ")}`, 700, true);
       m.stage = "done"; m.outcome = "review"; save(); render(); speak("Your budget is approved. The spend authorization needs one human check at Accounts Payable before the card is loaded.");
     } else { m.stage = "done"; m.outcome = "auto"; save(); render(); speak("Done. Your budget is approved."); }
   },
@@ -251,7 +245,7 @@ function handleCommand(raw) {
   // actions
   if (/submit/.test(t) && /proposal|budget|it/.test(t) && S.role === "treasurer") { const p = proposalFor(o.id); if (!p || !["draft", "returned"].includes(p.status)) return dockSay("There's no draft proposal to submit right now."); go("proposal"); A.submitProposal(); return dockSay(`Submitting ${p.id}.`); }
   if (/fix (it|everything|all|the budget|my budget)/.test(t)) { go("proposal"); A.fixAllP(); return dockSay("Fixed everything FundPath can fix on its own. Anything left needs your call."); }
-  if (/approve/.test(t) && S.role === "asg") { const q = S.spend.filter(s => s.status === "review"); const hit = q.find(s => t.includes(lc(orgById(s.orgId).name).replace("miami university ", "")) || t.includes(lc(s.id))) || (q.length === 1 ? q[0] : null); if (!hit) return dockSay(q.length ? `Which one? ${q.map(s => `${s.id} for ${orgById(s.orgId).name}`).join(", ")}.` : "Nothing is waiting for approval."); if (evaluateSpend(hit, S).level === "deny") return dockSay(`${hit.id} still has failing lines. Open it to approve only the clean lines or return it.`); A.apApprove({ id: hit.id }); return dockSay(`Approved ${hit.id}. The card is loaded and the treasurer has been told.`); }
+  if (/approve/.test(t) && S.role === "ap") { const q = S.spend.filter(s => s.status === "review"); const hit = q.find(s => t.includes(lc(orgById(s.orgId).name).replace("miami university ", "")) || t.includes(lc(s.id))) || (q.length === 1 ? q[0] : null); if (!hit) return dockSay(q.length ? `Which one? ${q.map(s => `${s.id} for ${orgById(s.orgId).name}`).join(", ")}.` : "Nothing is waiting for approval."); if (evaluateSpend(hit, S).level === "deny") return dockSay(`${hit.id} still has failing lines. Open it to approve only the clean lines or return it.`); A.apApprove({ id: hit.id }); return dockSay(`Approved ${hit.id}. The card is loaded and the treasurer has been told.`); }
   if (/picked up|got the card/.test(t)) { const sa = S.spend.find(s => s.orgId === o.id && s.status === "approved"); if (sa) { A.pickup({ id: sa.id }); return dockSay(`Marked ${sa.id}'s card as picked up.`); } }
   // navigation
   if (/^(open|go to|show( me)?|take me to|pull up)\b/.test(t)) { const hit = VIEW_WORDS.find(([, re]) => re.test(t)); if (hit) { go(hit[0]); return dockSay(`Here's ${NAV[S.role].find(n => n[0] === hit[0])[1]}.`); } }
@@ -361,8 +355,8 @@ Object.assign(A, {
 // Real club workspace
 // ---------------------------------------------------------------------------
 function renderSetupShell() {
-  $("#app").innerHTML = `<header class="site-head"><div class="utility"><div class="wrap"><nav class="ut-links"><a href="https://miamicentral.miamioh.edu" target="_blank" rel="noopener">Miami Central</a><a href="https://miamiohasg.com/funding-1" target="_blank" rel="noopener">ASG Funding</a></nav><div class="ut-right"><button class="ut-btn" data-a="modeMenu">My club data</button></div></div></div><div class="mainbar"><div class="wrap"><a class="brand2"><span class="mark">F</span><span class="word"><b>FundPath</b><small>Student Organization Funding</small></span></a></div></div></header>
-  <main id="main" class="wrap">${viewSetup()}</main>${siteFooter()}${UI.modal ? `<div class="scrim" data-a="closeModal"></div><div class="modal">${UI.modal()}</div>` : ""}`;
+  $("#app").innerHTML = `<header class="topbar"><a class="tb-brand"><span class="tb-logo">F</span><span><b>FundPath</b><small>for Miami Central</small></span></a><div class="tb-right"><span class="mode real" data-a="modeMenu">My club data</span></div></header>
+  <div class="shell one"><main id="main">${viewSetup()}</main></div>${UI.modal ? `<div class="scrim" data-a="closeModal"></div><div class="modal">${UI.modal()}</div>` : ""}`;
 }
 function viewSetup() {
   const f = (k, l, ph = "", type = "text") => `<label>${l}<input name="${k}" type="${type}" placeholder="${esc(ph)}"></label>`;
@@ -418,7 +412,7 @@ VIEWS.proposal = () => _viewProposal().replace('<button class="btn ghost" data-a
 
 // settings: straight-through toggle for ASG
 const _viewRules = VIEWS.rules;
-VIEWS.rules = () => _viewRules().replace('</div></section>', `</div><label class="check"><input type="checkbox" data-a="toggleST" ${S.settings.straightThrough ? "checked" : ""} ${S.role === "asg" ? "" : "disabled"}> Straight-through approval: when a proposal and its Spend Authorization pass every check, approve both without an advisor or Accounts Payable step. Anything FundPath isn't certain about still goes to a person.</label></section>`);
+VIEWS.rules = () => _viewRules().replace('</div></section>', `</div><label class="check"><input type="checkbox" data-a="toggleST" ${S.settings.straightThrough ? "checked" : ""} ${S.role === "asg" ? "" : "disabled"}> Demo proposal automation only. Accounts Payable must always decide on spend authorizations.</label></section>`);
 A.toggleST = (d, el) => { S.settings.straightThrough = el.checked; save(); toast(el.checked ? "Straight-through approval on" : "Every authorization now goes to the advisor and AP"); };
 
 // top-bar search: send to the assistant
@@ -431,7 +425,7 @@ function demoBeats() {
   const m = M(); const o = S.orgs.find(x => x.id === "o1");
   const sa = o && S.spend.filter(s => s.orgId === o.id && s.kind === "SA").slice(-1)[0];
   const done = [m.transcript.length > 0, !!m.built && (m.qs || []).length > 0 && m.qi >= (m.qs || []).length, ["running", "done"].includes(m.stage), !!sa && ["approved", "active", "closed"].includes(sa.status), !!sa && ["active", "closed"].includes(sa.status)];
-  const names = ["Run the exec meeting", "Answer FundPath's questions", "Say yes to submit", "Approved automatically", "Pick up the card"];
+  const names = ["Run the exec meeting", "Answer FundPath's questions", "Say yes to submit", "AP human decision", "Pick up the card"];
   const cur = done.indexOf(false);
   return names.map((n, i) => ({ n, done: done[i], on: i === cur }));
 }
@@ -439,9 +433,9 @@ const _render = render;
 render = function () {
   _render();
   if (S.mode !== "demo" || UI.hidePresenter) return;
-  const tb = document.querySelector(".gband") || document.querySelector(".site-head"); if (!tb) return;
+  const tb = document.querySelector(".topbar"); if (!tb) return;
   const el = document.createElement("div"); el.className = "presenter";
-  el.innerHTML = `<div class="wrap pr-in"><b>Demo</b><ol>${demoBeats().map((x, i) => `<li class="${x.done ? "done" : x.on ? "on" : ""}">${i + 1}. ${esc(x.n)}</li>`).join("")}</ol><button data-a="demoRestart">Restart demo</button><button data-a="demoHide" style="margin-left:0">Hide</button></div>`;
+  el.innerHTML = `<b>Demo</b><ol>${demoBeats().map((x, i) => `<li class="${x.done ? "done" : x.on ? "on" : ""}">${i + 1}. ${esc(x.n)}</li>`).join("")}</ol><button data-a="demoRestart">Restart demo</button><button data-a="demoHide" style="margin-left:0">Hide</button>`;
   tb.after(el);
 };
 Object.assign(A, {
@@ -455,4 +449,4 @@ VIEWS.upload = () => { const o = ORG(); const ap = S.proposals.find(p => p.orgId
 
 // Dashboard: lead with the exec meeting when there's no proposal yet
 const _vh = VIEWS.home;
-VIEWS.home = () => _vh().replace(/<h1>[^<]*<\/h1><p>[^<]*<\/p>/, `<h1>Dashboard</h1><p>Where ${esc(ORG().name)}'s funding and spending stand for ${esc(S.settings.semester)}.</p>`).replace(/<button class="btn" data-a="newProposal">Start ([^<]*) proposal<\/button>/, '<button class="btn ghost" data-a="go" data-id="upload">Upload a budget</button><button class="btn ghost" data-a="newProposal">Start $1 proposal by hand</button><button class="btn" data-a="go" data-id="meeting">Start with an exec meeting</button>');
+VIEWS.home = () => _vh().replace(/<button class="btn" data-a="newProposal">Start ([^<]*) proposal<\/button>/, '<button class="btn ghost" data-a="go" data-id="upload">Upload a budget</button><button class="btn ghost" data-a="newProposal">Start $1 proposal by hand</button><button class="btn" data-a="go" data-id="meeting">Start with an exec meeting</button>');

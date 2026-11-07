@@ -47,13 +47,11 @@ Optional AI: deploy to Vercel and set `ANTHROPIC_API_KEY`. `api/ai.js` handles t
 
 Demo data lives in the browser (localStorage). "Reset demo data" is in the sidebar.
 
-## Demo run (exec meeting → card, no approvals needed)
+## Demo run (human AP approval required)
 
-1. **Treasurer → Exec meeting.** Click **Start listening** (Chrome/Edge) and run the meeting, or **Play the demo meeting**. Go through every event and item with amounts. Say "FundPath, build our budget."
-2. FundPath builds the budget, removes what ASG never funds (SR §19.1), caps anything over a limit, then **asks clarifying questions out loud** (missing quotes, vague items like "supplies", whether food is sample-size, event dates). Answer by voice, buttons or typing.
-3. It shows the filled ASG proposal sheet + funding form and how every line gets paid (card Spend Authorization, speaker contract/requisition, journal transfer), then asks "Do you want me to submit it?" Say **yes**.
-4. **Straight-through approval:** if every check passes (7/7 criteria with no warnings, events on Miami Central, quotes, tier limit, no debt, treasurer has Workday access, SA matches the budget line for line), the proposal and Spend Authorization are approved with no advisor or ASG step and the card is ready. If FundPath isn't certain about anything, only those items go to the ASG Funding Committee or Accounts Payable, with the reason. ASG can turn straight-through off in Rules & settings.
-5. Speaker contracts are still signed by SEA (university policy); FundPath drafts the requisition.
+See [WORKFLOW_AUDIT.md](WORKFLOW_AUDIT.md) for the seven-step audit, demo walkthrough, verification and remaining integration dependencies. Every institutional submission and balance change is simulated. AP always makes the final decision in the dedicated Roudebush Hall portal.
+
+Live ElevenLabs use is disabled on every page load. The meeting page requires an explicit session-only billing opt-in before live speech, transcription or conversation. Check your ElevenLabs plan before enabling it. The built-in meeting demo works without ElevenLabs requests.
 
 ## Other features
 

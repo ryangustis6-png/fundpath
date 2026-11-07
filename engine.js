@@ -161,7 +161,7 @@ function evaluateProposal(p, org, S) {
   p.lines.forEach(l => { const e = ev(l.eventId); const pct = e ? eventPct(e, org).pct : 100; lineAward[l.id] = cents(amt(l) * pct / 100 * st.mult); });
   const award = cents(Object.values(lineAward).reduce((s, x) => s + x, 0));
   const passed = criteria.filter(c => c.level === "ok").length;
-  const auto = !flags.some(f => f.level === "warn" || f.level === "deny");
+  const auto = award === total && !flags.some(f => f.level === "warn" || f.level === "deny");
   return { criteria, flags, lineLevel, limits, total, room, award, lineAward, passed, auto, standing: st };
 }
 function l2(c) { const k = Object.keys(CATS).find(x => CATS[x] === c) || ""; return k.replace(/^(Event|Admin|Capital|Trip): /, ""); }
@@ -269,14 +269,15 @@ function ledgerFor(state, orgId) {
     lines.push({ l, p, approved, committed, spent, avail: cents(approved - Math.max(committed, spent)), route: (CATS[l.cat] || {}).route || "card" });
   });
   const sum = k => cents(lines.reduce((s, x) => s + x[k], 0));
-  const cards = state.spend.filter(s => s.orgId === orgId && s.kind === "SA" && ["active", "closed", "pickup"].includes(s.status));
+  const cards = state.spend.filter(s => s.orgId === orgId && s.fund === "ASG" && s.kind === "SA" && ["approved", "active", "pickup"].includes(s.status));
   const loaded = cents(cards.reduce((t, s) => t + s.lines.reduce((u, x) => u + spendLineAmt(x), 0), 0));
   const cardSpent = cents(state.txns.filter(x => x.orgId === orgId && cards.some(c => c.id === x.saId)).reduce((t, x) => t + x.amount, 0));
   const org = state.orgs.find(o => o.id === orgId);
   const agencyIn = cents(state.deposits.filter(d => d.orgId === orgId && d.recorded).reduce((t, d) => t + d.amount, 0));
-  const agencyCommitted = cents(state.spend.filter(s => s.orgId === orgId && s.fund === "Agency" && ACTIVE_SPEND.includes(s.status)).reduce((t, s) => t + (s.kind === "REQ" ? +s.amount : s.lines.reduce((u, x) => u + spendLineAmt(x), 0)), 0));
+  const agencyCommitted = cents(state.spend.filter(s => s.orgId === orgId && s.fund === "Agency" && (s.kind === "SA" ? ["approved", "pickup", "active", "closed"].includes(s.status) : ACTIVE_SPEND.includes(s.status))).reduce((t, s) => t + (s.kind === "REQ" ? +s.amount : s.lines.reduce((u, x) => u + spendLineAmt(x), 0)), 0));
+  const agencyReturned = state.spend.filter(s => s.orgId === orgId && s.fund === "Agency").reduce((n,s) => n + (s.sweepAmount || 0),0);
   const approvedTot = sum("approved"), spentTot = sum("spent");
-  return { p, lines, approved: approvedTot, committed: sum("committed"), spent: spentTot, avail: sum("avail"), loaded, cardSpent, cardBal: cents(loaded - cardSpent), agency: cents((org.agencyBalance || 0) + agencyIn - agencyCommitted), agencyIn, spentPct: approvedTot ? Math.round(spentTot / approvedTot * 100) : 0 };
+  return { p, lines, approved: approvedTot, committed: sum("committed"), spent: spentTot, avail: sum("avail"), loaded, cardSpent, cardBal: cents(loaded - cardSpent), agency: cents((org.agencyBalance || 0) + agencyIn - agencyCommitted + agencyReturned), agencyIn, spentPct: approvedTot ? Math.round(spentTot / approvedTot * 100) : 0 };
 }
 
 // =============== Spend (second line of review) ===============
@@ -307,7 +308,7 @@ function evaluateSpend(s, state) {
   if (s.descr === "ADD FUNDS" && !/^\d{4}$/.test(s.cardLast4 || "")) flags.push({ rule: "JUSTIFY", level: "warn", msg: "Adding funds: include the existing card's last 4 digits." });
   if (!s.proofBudget) flags.push({ rule: "JUSTIFY", level: "warn", msg: "Attach proof of budget." });
   if (!s.proofFunds) flags.push({ rule: "PROOFFUNDS", level: "warn", msg: "Attach proof of funds (balance report)." });
-  if (s.fund === "Agency" && total > led.agency + (ACTIVE_SPEND.includes(s.status) ? total : 0) + 0.001) flags.push({ rule: "FUNDSFIRST", level: "deny", msg: `Agency balance is ${money(led.agency)}; this needs ${money(total)}.` });
+  if (s.fund === "Agency" && total > led.agency + (["approved", "pickup", "active", "closed"].includes(s.status) ? total : 0) + 0.001) flags.push({ rule: "FUNDSFIRST", level: "deny", msg: `Agency balance is ${money(led.agency)}; this needs ${money(total)}.` });
   if (s.descr === "RENTAL/GAS CARDS") { const Rr = s.rental || {}; if (Rr.vendor === "Enterprise" && +Rr.youngest < 21) flags.push({ rule: "RENTAL", level: "deny", msg: "Enterprise blocks drivers under 21. Use Hertz." }); if (Rr.van && (+Rr.youngest < 21 || !Rr.vanTraining)) flags.push({ rule: "RENTAL", level: "deny", msg: "Van drivers must be 21+ with van training." }); }
   s.lines.forEach(l => {
     const amt = spendLineAmt(l); const text = `${l.memo} ${l.desc} ${l.vendor}`;
