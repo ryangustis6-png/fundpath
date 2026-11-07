@@ -50,7 +50,7 @@ const {chromium}=require('playwright');
   }
   await page.getByRole('button',{name:'Organization',exact:true}).click();await page.evaluate(()=>A.go({id:'connections'}));
   await page.getByRole('button',{name:'Search directory',exact:true}).click();await page.locator('.campus-result').waitFor();assert.equal(await page.evaluate(()=>ORG().tier),4);
-  await page.evaluate(()=>A.go({id:'quotes'}));assert.equal(await page.getByRole('button',{name:'Live research paused'}).isDisabled(),true);
+  await page.evaluate(()=>A.go({id:'quotes'}));await page.getByText('Find supplier offers online',{exact:true}).click();assert.equal(await page.getByRole('button',{name:'Live research paused'}).isDisabled(),true);
   // Exercise the guided UI through automatic proposal checks, human AP,
   // physical pickup confirmation, charge entry and an actual receipt attachment.
   await page.evaluate(()=>{
