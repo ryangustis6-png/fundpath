@@ -81,7 +81,7 @@ function liveBudgetHtml() {
   const evn = id => (x.events.find(e => e.id === id) || {}).name || "General";
   return `<table class="tbl tight"><thead><tr><th>Heard</th><th>For</th><th class="r">Amount</th></tr></thead><tbody>${x.lines.map(l => `<tr><td>${esc(l.item)}<br><small class="muted">${esc(l.cat)}</small></td><td><small>${esc(evn(l.eventId))}</small></td><td class="r mono">${money(+l.amount)}</td></tr>`).join("")}</tbody><tfoot><tr><td colspan="2"><b>Running total</b></td><td class="r mono"><b>${money(x.lines.reduce((t, l) => t + +l.amount, 0))}</b></td></tr></tfoot></table>`;
 }
-function paintLive() { const el = $("#live"); if (el) el.innerHTML = liveBudgetHtml(); }
+function paintLive() { patch($("#live"), liveBudgetHtml()); }
 
 heard = function (text, who) {
   const m = M(); const t = String(text || "").trim(); if (!t) return;
@@ -128,7 +128,7 @@ function viewMeeting2() {
       <div class="mic-ctl"><select data-a2="speaker" title="Who's talking">${EXEC.map(x => `<option ${x === (UI.speaker || "Exec board") ? "selected" : ""}>${x}</option>`).join("")}</select><button class="btn" data-a="meetMic">${VOICE.listening ? "Stop listening" : "Start listening"}</button><button class="btn ghost" data-a="meetRecord">${VOICE.recording ? "Stop and transcribe" : "Record (ElevenLabs)"}</button></div></div>
       <div id="transcript" class="transcript">${transcriptHtml()}</div>
       <form class="composer" data-a2="meetType"><input id="meetIn" placeholder="Type what someone said…"><button class="btn ghost">Add</button></form>
-      <div class="mic-foot">${m.transcript.length ? `<span class="muted small">${m.transcript.length} lines</span>` : `<button class="btn ghost sm" data-a="meetDemo">Play the demo meeting</button>`}<button class="btn sm" data-a="meetBuild" ${m.transcript.length && ["idle", "built"].includes(m.stage) ? "" : "disabled"}>Build our budget</button></div>
+      <div class="mic-foot">${m.transcript.length ? `<span class="muted small">${m.transcript.length} lines</span>` : S.mode === "demo" ? `<button class="btn ghost sm" data-a="meetDemo">Play the demo meeting</button>` : `<span class="muted small">Start listening, or type what people say</span>`}<button class="btn sm" data-a="meetBuild" ${m.transcript.length && ["idle", "built"].includes(m.stage) ? "" : "disabled"}>Build our budget</button></div>
     </section>
     <div>${right}</div>
   </div>`;
@@ -163,7 +163,7 @@ Object.assign(A, {
     for (const [w, t] of DEMO_MEETING) { if (!VOICE.playing) break; await sleep(650 + Math.min(1500, t.length * 8)); heard(t, w); }
     VOICE.playing = false; },
   meetReset: () => { S.meeting = { transcript: [], built: null, stage: "idle", pipe: [] }; VOICE.playing = false; UI.demoAuto = false; save(); render(); },
-  meetBuild: async () => { const m = M(); const o = ORG(); if (!m.transcript.length) return; m.stage = "building"; m.pipe = []; m.conf = null; m.payPlan = null; save(); render();
+  meetBuild: async () => { const m = M(); const o = ORG(); if (!m.transcript.length || ["building", "question", "running"].includes(m.stage)) return; m.stage = "building"; m.pipe = []; m.conf = null; m.payPlan = null; save(); render();
     await sleep(1200);
     const b = aiBuildBudget(m.transcript.map(([w, t]) => `${w}: ${t}`).join("\n"), o, S.settings);
     m.built = b; m.qs = buildQuestions(b.p, o, S.settings); m.qi = 0; m.asked = m.qs.map(q => q.kind + (q.line || q.event));
@@ -211,7 +211,7 @@ Object.assign(A, {
   },
   meetEdit: () => { const m = M(); const o = ORG(); const p = materialize(m.built.p, o, "draft"); m.stage = "built"; save(); A.go({ id: "proposal" }); toast(`${p.id} opened in the proposal editor`); }
 });
-document.addEventListener("submit", e => { const f = e.target.closest("[data-a2=meetAns]"); if (!f) return; e.preventDefault(); const i = $("#ansIn"); const v = i.value.trim(); if (!v) return; M().transcript.push([UI.speaker || "Exec board", v]); A.meetAnswer({ v }); });
+document.addEventListener("submit", e => { const f = e.target.closest("[data-a2=meetAns]"); if (!f) return; e.preventDefault(); const i = $("#ansIn"); const v = i.value.trim(); if (!v) return; i.value = ""; M().transcript.push([UI.speaker || "Exec board", v]); A.meetAnswer({ v }); });
 
 // ---------------------------------------------------------------------------
 // Talk to FundPath: voice assistant on every page
@@ -225,7 +225,7 @@ function voiceDock() {
       <form class="dock-in" data-a2="dockSend"><button type="button" class="mic ${DOCK.listening ? "on" : ""}" data-a="dockMic" title="Hold a conversation">${DOCK.listening ? "Stop" : "Speak"}</button><input id="dockIn" placeholder="Ask or tell FundPath…"><button class="btn sm">Send</button></form></div>` : ""}
     <button class="dock-b" data-a="dockToggle">${DOCK.open ? "Close" : "Talk to FundPath"}</button></div>`;
 }
-function dockSay(text, who = "ai") { DOCK.log.push({ who, text }); const el = $("#dockLog"); if (el) { el.innerHTML = DOCK.log.map(x => `<div class="dl ${x.who}"><span>${esc(x.text)}</span></div>`).join(""); el.scrollTop = el.scrollHeight; } if (who === "ai") speak(text); }
+function dockSay(text, who = "ai") { DOCK.log.push({ who, text }); const el = $("#dockLog"); if (el) { patch(el, DOCK.log.map(x => `<div class="dl ${x.who}"><span>${esc(x.text)}</span></div>`).join("")); el.scrollTop = el.scrollHeight; } if (who === "ai") speak(text); }
 const VIEW_WORDS = [["meeting", /meeting|record/], ["upload", /upload|excel|spreadsheet|file|check (my|our) budget/], ["proposal", /proposal|budget/], ["spend", /spend auth|authorization|\bsa\b/], ["card", /card|receipt/], ["deposits", /deposit|cash sale/], ["workday", /workday/], ["help", /help|liaison|question/], ["rules", /rules?|limits?|settings/], ["home", /dashboard|home/], ["sareview", /spend review|review queue/], ["review", /proposal review/]];
 function handleCommand(raw) {
   const t = lc(raw).trim(); const o = ORG(); if (!t) return;
@@ -361,8 +361,8 @@ Object.assign(A, {
 // Real club workspace
 // ---------------------------------------------------------------------------
 function renderSetupShell() {
-  $("#app").innerHTML = `<header class="hdr"><div class="hdr-in"><a class="brand2"><span class="mark">F</span><span class="word"><b>FundPath</b><small>Student Organization Funding</small></span></a><div class="hdr-r"><button class="hdr-btn" data-a="modeMenu">My club data</button></div></div></header>
-  <main id="main" class="pg solo">${viewSetup()}</main>${siteFooter()}${UI.modal ? `<div class="scrim" data-a="closeModal"></div><div class="modal">${UI.modal()}</div>` : ""}`;
+  paintApp(`<header class="hdr"><div class="hdr-in"><a class="brand2"><span class="mark">F</span><span class="word"><b>FundPath</b><small>Student Organization Funding</small></span></a><div class="hdr-r"><button class="hdr-btn" data-a="modeMenu">My club data</button></div></div></header>
+  <main id="main" class="pg solo">${viewSetup()}</main>${siteFooter()}${UI.modal ? `<div class="scrim" data-a="closeModal"></div><div class="modal">${UI.modal()}</div>` : ""}`);
 }
 function viewSetup() {
   const f = (k, l, ph = "", type = "text") => `<label>${l}<input name="${k}" type="${type}" placeholder="${esc(ph)}"></label>`;
@@ -435,13 +435,10 @@ function demoBeats() {
   const cur = done.indexOf(false);
   return names.map((n, i) => ({ n, done: done[i], on: i === cur }));
 }
-const _render = render;
-render = function () {
-  _render();
-  if (S.mode !== "demo" || UI.hidePresenter) return;
-  const host = document.getElementById("sideDemo"); if (!host) return;
-  host.innerHTML = `<div class="sdemo"><h5>Demo guide</h5><ol>${demoBeats().map((x, i) => `<li class="${x.done ? "done" : x.on ? "on" : ""}">${esc(x.n)}</li>`).join("")}</ol><div class="sdemo-b"><button class="link" data-a="demoRestart">Restart demo</button><button class="link" data-a="demoHide">Hide</button></div></div>`;
-};
+function demoGuideHtml() {
+  if (S.mode !== "demo" || UI.hidePresenter || S.role !== "treasurer") return "";
+  return `<div class="sdemo"><h5>Demo guide</h5><ol>${demoBeats().map(x => `<li class="${x.done ? "done" : x.on ? "on" : ""}">${esc(x.n)}</li>`).join("")}</ol><div class="sdemo-b"><button class="link" data-a="demoRestart">Restart demo</button><button class="link" data-a="demoHide">Hide</button></div></div>`;
+}
 Object.assign(A, {
   demoRestart: () => { S = seedState(); S.mode = "demo"; UI = { view: "meeting", modal: null, threadId: null, busy: false, saId: null }; VOICE.playing = false; DOCK.log = []; save(); location.hash = "meeting"; render(); window.scrollTo(0, 0); toast("Demo reset. Start the meeting when you're ready."); },
   demoHide: () => { UI.hidePresenter = true; render(); }
@@ -454,3 +451,11 @@ VIEWS.upload = () => { const o = ORG(); const ap = S.proposals.find(p => p.orgId
 // Dashboard: lead with the exec meeting when there's no proposal yet
 const _vh = VIEWS.home;
 VIEWS.home = () => _vh().replace(/<h1>[^<]*<\/h1><p>[^<]*<\/p>/, `<h1>Dashboard</h1><p>Where ${esc(ORG().name)}'s funding and spending stand for ${esc(S.settings.semester)}.</p>`).replace(/<button class="btn" data-a="newProposal">Start ([^<]*) proposal<\/button>/, '<button class="btn ghost" data-a="go" data-id="upload">Upload a budget</button><button class="btn ghost" data-a="newProposal">Start $1 proposal by hand</button><button class="btn" data-a="go" data-id="meeting">Start with an exec meeting</button>');
+
+// Clicking the menu link for the page you're already on: back to the top of that page
+// (and out of an open Spend Authorization or requisition back to the list).
+document.addEventListener("click", e => {
+  const a = e.target.closest && e.target.closest('a[href^="#"]'); if (!a || e.metaKey || e.ctrlKey) return;
+  const h = a.getAttribute("href").slice(1);
+  if (h && h === UI.view) { e.preventDefault(); const had = !!(UI.saId || UI.modal); UI.saId = null; UI.modal = null; if (had) render(); window.scrollTo({ top: 0, behavior: "smooth" }); }
+});

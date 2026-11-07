@@ -369,6 +369,21 @@ main.wrap{padding-top:30px;padding-bottom:70px;max-width:1240px}
 @media (max-width:1000px){.lay{grid-template-columns:1fr}.snav{position:static;height:auto}.hdr-in{height:auto;flex-wrap:wrap;padding:10px 16px;gap:10px}.hdr-l{display:none}.pg{padding:18px}}
 
 .who-sw{margin:8px 0 0;font-size:12.5px;color:#666;gap:3px}.who-sw select{font-size:14px;padding:4px 6px}
+
+/* ---------- Smoothness ---------- */
+.btn,.link,.sg a,.seg2 button,.hdr-btn,.rtag,.dock-b,.choice button,.x,.mic,.drop,input,select,textarea{transition:background-color .15s ease,color .15s ease,border-color .15s ease,box-shadow .15s ease,outline-color .15s ease}
+.pg.enter{animation:pgIn .2s ease-out}
+@keyframes pgIn{from{opacity:.25;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.scrim{animation:fadeIn .16s ease-out}
+.modal{animation:mIn .18s ease-out}@keyframes mIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+.toast{animation:tIn .22s ease-out}@keyframes tIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+.tl,.pipe-v li,.changes li,.dl,.flags li,.dock-p{animation:fadeIn .25s ease-out}
+body.modal-open{overflow:hidden}
+.btn:active{transform:translateY(1px)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+html{scrollbar-gutter:stable}
 </style>
 </head>
 <body>
@@ -376,6 +391,7 @@ main.wrap{padding-top:30px;padding-bottom:70px;max-width:1240px}
 <script src="rules.js"></script>
 <script src="engine.js"></script>
 <script src="data.js"></script>
+<script src="vendor/morphdom-umd.min.js"></script>
 <script src="importer.js"></script>
 <script src="app.js"></script>
 <script src="features.js"></script>

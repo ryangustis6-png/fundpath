@@ -13,6 +13,43 @@ const orgById = id => S.orgs.find(o => o.id === id);
 const nextId = (p, arr) => { const n = arr.filter(x => String(x.id).startsWith(p + "-")).map(x => +String(x.id).split("-")[1] || 0); return `${p}-${Math.max(1000, ...n) + 1}`; };
 const uid = () => Math.random().toString(36).slice(2, 7);
 function toast(msg, kind = "ok") { document.querySelectorAll(".toast").forEach(x => x.remove()); const t = document.createElement("div"); t.className = `toast ${kind}`; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3400); }
+// In-place DOM updates. The page is never torn down and rebuilt, so the field you're typing in,
+// the cursor, scroll positions (page, sidebar, transcript) and opened sections all survive a redraw.
+const MORPH_OPTS = {
+  childrenOnly: true,
+  onBeforeElUpdated(from, to) {
+    if (from.tagName === "DETAILS") { if (from.open) to.setAttribute("open", ""); else to.removeAttribute("open"); }
+    if (from.tagName === "INPUT" && from.type === "file") return false;
+    if (from === document.activeElement && (from.tagName === "TEXTAREA" || from.tagName === "SELECT" || (from.tagName === "INPUT" && !["checkbox", "radio", "button", "submit", "file"].includes(from.type)))) {
+      from.disabled = to.hasAttribute("disabled");
+      return false; // leave what the person is typing alone
+    }
+    return true;
+  }
+};
+function patch(el, html) {
+  if (!el) return;
+  if (!window.morphdom) { el.innerHTML = html; return; }
+  const t = el.cloneNode(false); t.innerHTML = html; morphdom(el, t, MORPH_OPTS);
+}
+const PAINT = { view: null, modal: false };
+function paintApp(html) {
+  const tr = $("#transcript"), dl = $("#dockLog");
+  const stick = el => el && el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+  const stickT = stick(tr), stickD = stick(dl);
+  patch($("#app"), html);
+  const tr2 = $("#transcript"); if (tr2 && (stickT || !tr)) tr2.scrollTop = tr2.scrollHeight;
+  const dl2 = $("#dockLog"); if (dl2 && (stickD || !dl)) dl2.scrollTop = dl2.scrollHeight;
+  document.body.classList.toggle("modal-open", !!UI.modal);
+  if (UI.modal && !PAINT.modal) { const f = document.querySelector(".modal input:not([type=hidden]):not([type=file]):not([type=checkbox]), .modal textarea"); if (f) setTimeout(() => f.focus({ preventScroll: true }), 0); }
+  PAINT.modal = !!UI.modal;
+  const key = S.role + ":" + UI.view + ":" + (UI.saId || "");
+  if (PAINT.view !== null && PAINT.view !== key) {
+    const m = $("#main"); if (m) { m.classList.remove("enter"); void m.offsetWidth; m.classList.add("enter"); }
+    if (PAINT.view.split(":").slice(0, 2).join(":") !== key.split(":").slice(0, 2).join(":") || UI.saId) window.scrollTo(0, 0);
+  }
+  PAINT.view = key;
+}
 function logEvt(orgId, text) { S.log.unshift({ at: new Date().toISOString(), orgId, text }); S.log = S.log.slice(0, 80); }
 const isEv = cat => !!(CATS[cat] && (CATS[cat].sec === "event" || CATS[cat].sec === "trip"));
 const proposalFor = orgId => S.proposals.find(p => p.orgId === orgId && p.semester === S.settings.semester);
@@ -65,14 +102,14 @@ function render() {
     ? `<div class="who"><div class="who-logo">${esc(initials(o.name))}</div><div class="who-t"><b>${esc(o.name)}</b><span>Tier ${TIER_ROMAN[o.tier] || "?"} · ${esc(o.worktag || "")}</span><span>Advisor: ${esc(o.advisor || "not set")} · <a href="#org">Edit</a></span>${S.orgs.length > 1 ? `<label class="who-sw">Switch organization<select data-a2="pickOrg">${S.orgs.map(x => `<option value="${x.id}" ${x.id === o.id ? "selected" : ""}>${esc(x.name.replace(/^Miami University /, ""))}</option>`).join("")}</select></label>` : ""}</div></div>`
     : `<div class="who"><div class="who-logo alt">${role === "asg" ? "ASG" : "ADV"}</div><div class="who-t"><b>${role === "asg" ? "ASG Funding + Accounts Payable" : "Organization advisors"}</b><span>${S.orgs.length} organizations</span></div></div>`;
   const groups = NAV_GROUPS[role].map(([g, vs]) => `<div class="sg"><h5>${g}</h5>${vs.filter(v => nav.some(n => n[0] === v)).map(v => `<a href="#${v}" class="${UI.view === v ? "on" : ""}"><span>${esc(label(v))}</span>${badge(v)}</a>`).join("")}</div>`).join("");
-  $("#app").innerHTML = `
+  paintApp(`
   <header class="hdr"><div class="hdr-in">
     <a class="brand2" href="#${nav[0][0]}"><span class="mark">F</span><span class="word"><b>FundPath</b><small>Student Organization Funding</small></span></a>
     <div class="hdr-r"><span class="hdr-l">Viewing as</span><div class="seg2">${[["treasurer", "Treasurer"], ["advisor", "Advisor"], ["asg", "ASG / AP"]].map(([r, l]) => `<button class="${role === r ? "on" : ""}" data-a="role" data-r="${r}">${l}</button>`).join("")}</div>
       <button class="hdr-btn" data-a="modeMenu">${S.mode === "real" ? "My club data" : "Demo data"}</button></div>
   </div></header>
   <div class="lay">
-    <aside class="snav">${who}<nav class="sgs">${groups}</nav><div id="sideDemo"></div></aside>
+    <aside class="snav">${who}<nav class="sgs">${groups}</nav><div id="sideDemo">${typeof demoGuideHtml === "function" ? demoGuideHtml() : ""}</div></aside>
     <main id="main" class="pg">
       <div class="crumbs">${role === "treasurer" ? esc(o.name || "") : role === "asg" ? "ASG Funding Committee" : "Advisors"} <span>›</span> ${esc(label(UI.view))}</div>
       ${S.mode === "demo" && role === "treasurer" ? `<p class="demo-note">Demo data: officers, numbers and approvals are examples, not pulled from Miami Central or Workday.</p>` : ""}
@@ -81,7 +118,7 @@ function render() {
   </div>
   ${siteFooter()}
   ${voiceDock()}
-  ${UI.modal ? `<div class="scrim" data-a="closeModal"></div><div class="modal">${UI.modal()}</div>` : ""}`;
+  ${UI.modal ? `<div class="scrim" data-a="closeModal"></div><div class="modal">${UI.modal()}</div>` : ""}`);
 }
 function readinessHtml(o) {
   const r = o.readiness || {};
@@ -204,7 +241,7 @@ function proposalSide(p, o, ev, ro) {
 }
 function refreshProposalSide() {
   const o = ORG(), p = proposalFor(o.id); if (!p) return; const ev = evaluateProposal(p, o, S.settings);
-  const side = $("#side"); if (side) side.innerHTML = proposalSide(p, o, ev, false);
+  patch($("#side"), proposalSide(p, o, ev, false));
   p.lines.forEach(l => { const c = $("#lv-" + l.id); if (c) c.innerHTML = lvl(ev.lineLevel[l.id]); const r = $("#row-" + l.id); if (r) r.className = "lvl-" + (ev.lineLevel[l.id] || "ok"); });
 }
 function applyPFix(p, o, d) {
@@ -289,7 +326,7 @@ function saSide(s, e, ro) {
     ${e.flags.length ? `<ul class="flags">${e.flags.map(f => { const l = f.lineId ? s.lines.find(x => x.id === f.lineId) : null; return `<li class="${f.level}"><div>${f.slip ? `<span class="slip">Slipped past funding approval</span>` : ""}${l ? `<small>${esc(l.desc || l.memo)}</small>` : ""}<p>${esc(f.msg)}</p>${ruleTag(f.rule)}</div>${!ro && l && f.level === "deny" ? `<button class="btn sm ghost" data-a="delSL" data-id="${l.id}">Remove line</button>` : ""}</li>`; }).join("")}</ul>` : `<p class="okline">All checks pass.</p>`}
     ${!ro ? `<p class="muted small">You can submit with open issues, but the reviewer will see every flag. Fixing them now avoids a return.</p>` : ""}</section>`;
 }
-function refreshSASide() { const s = S.spend.find(x => x.id === UI.saId); if (!s) return; const side = $("#side"); if (side) side.innerHTML = saSide(s, evaluateSpend(s, S), !["draft", "returned"].includes(s.status) || S.role !== "treasurer"); }
+function refreshSASide() { const s = S.spend.find(x => x.id === UI.saId); if (!s) return; patch($("#side"), saSide(s, evaluateSpend(s, S), !["draft", "returned"].includes(s.status) || S.role !== "treasurer")); }
 function viewReqEditor(s) {
   const o = orgById(s.orgId); const e = evaluateSpend(s, S); const p = approvedProposal(S, s.orgId); const pl = p && p.lines.find(l => l.id === s.lineRef);
   const ro = !["draft", "returned"].includes(s.status) || S.role !== "treasurer"; const dis = ro ? "disabled" : "";
@@ -516,7 +553,7 @@ const A = {
   role: d => { S.role = d.r; UI.view = NAV[d.r][0][0]; UI.saId = null; location.hash = UI.view; save(); render(); },
   go: d => { UI.modal = null; UI.saId = null; UI.view = d.id; location.hash = d.id; render(); window.scrollTo(0, 0); },
   reset: () => { UI.modal = () => `<div class="mh"><h2>Reset demo data?</h2><button class="x" data-a="closeModal">×</button></div><p>Restores the seeded orgs, proposals and authorizations.</p><div class="mf"><span></span><button class="btn" data-a="doReset">Reset</button></div>`; render(); },
-  doReset: () => { S = seedState(); UI = { view: "home", modal: null, threadId: null, busy: false, saId: null }; save(); location.hash = "home"; render(); toast("Demo data reset"); },
+  doReset: () => { S = seedState(); S.mode = "demo"; UI = { view: "home", modal: null, threadId: null, busy: false, saId: null }; save(); location.hash = "home"; render(); toast("Demo data reset"); },
   closeModal: () => { UI.modal = null; UI.rcpt = null; draftDep = null; render(); },
   showRule: d => { UI.modal = () => ruleModal(d.id); render(); },
   copy: async d => { try { await navigator.clipboard.writeText(d.v); toast("Copied"); } catch (e) { toast("Select and copy manually"); } },
@@ -579,8 +616,8 @@ const A = {
 
 document.addEventListener("click", e => { const el = e.target.closest("[data-a]"); if (!el || el.tagName === "A") return; const fn = A[el.dataset.a]; if (!fn) return; if (el.tagName === "BUTTON") e.preventDefault(); fn(el.dataset, el, e); });
 document.addEventListener("submit", e => { const f = e.target.closest("[data-a2]"); if (!f) return; e.preventDefault();
-  if (f.dataset.a2 === "send") sendQuestion($("#chatIn").value);
-  if (f.dataset.a2 === "reply") { const txt = $("#rep-" + f.dataset.id).value.trim(); if (!txt) return; const t = S.threads.find(x => x.id === f.dataset.id); t.msgs.push({ from: "asg", who: "ASG Financial Services · asgfunding@miamioh.edu", text: txt }); t.status = "answered"; t.unread = true; logEvt(t.orgId, `ASG answered: ${t.subject}`); save(); render(); toast("Reply sent to the org"); } });
+  if (f.dataset.a2 === "send") { const v = $("#chatIn").value; f.reset(); sendQuestion(v); }
+  if (f.dataset.a2 === "reply") { const txt = $("#rep-" + f.dataset.id).value.trim(); if (!txt) return; f.reset(); const t = S.threads.find(x => x.id === f.dataset.id); t.msgs.push({ from: "asg", who: "ASG Financial Services · asgfunding@miamioh.edu", text: txt }); t.status = "answered"; t.unread = true; logEvt(t.orgId, `ASG answered: ${t.subject}`); save(); render(); toast("Reply sent to the org"); } });
 function val(el) { return el.type === "checkbox" ? el.checked : el.type === "number" ? (el.value === "" ? 0 : +el.value) : el.value; }
 function onField(e, full) {
   const el = e.target;
@@ -590,24 +627,26 @@ function onField(e, full) {
   if (d.f) {
     const [k, a, b] = d.f.split(":"); const v = val(el);
     const p = proposalFor(S.orgId); const s = S.spend.find(x => x.id === UI.saId);
-    if (k === "p") p[a] = v; else if (k === "ack") { p.ack = p.ack || {}; p.ack[a] = v; } else if (k === "ev") { const x = p.events.find(z => z.id === a); x[b] = v; } else if (k === "ln") { const x = p.lines.find(z => z.id === a); x[b] = v; }
-    else if (k === "sa") s[a] = v; else if (k === "rent") { s.rental = s.rental || { vendor: "Hertz", youngest: 21 }; s.rental[a] = v; } else if (k === "sl") { const x = s.lines.find(z => z.id === a); x[b] = v; if (b === "lineRef") { const pl = approvedProposal(S, s.orgId) && approvedProposal(S, s.orgId).lines.find(z => z.id === v); if (pl) { x.desc = pl.item; x.expense = CATS[pl.cat].sc; } } } else if (k === "rq") s[a] = v;
+    if (["p", "ack", "ev", "ln"].includes(k) && !p) return;
+    if (["sa", "rent", "sl", "rq"].includes(k) && !s) return;
+    if (k === "p") p[a] = v; else if (k === "ack") { p.ack = p.ack || {}; p.ack[a] = v; } else if (k === "ev") { const x = p.events.find(z => z.id === a); if (!x) return; x[b] = v; } else if (k === "ln") { const x = p.lines.find(z => z.id === a); if (!x) return; x[b] = v; }
+    else if (k === "sa") s[a] = v; else if (k === "rent") { s.rental = s.rental || { vendor: "Hertz", youngest: 21 }; s.rental[a] = v; } else if (k === "sl") { const x = s.lines.find(z => z.id === a); if (!x) return; x[b] = v; if (b === "lineRef") { const pl = approvedProposal(S, s.orgId) && approvedProposal(S, s.orgId).lines.find(z => z.id === v); if (pl) { x.desc = pl.item; x.expense = CATS[pl.cat].sc; } } } else if (k === "rq") s[a] = v;
     save();
     if (full || el.tagName === "SELECT" || el.type === "checkbox") render(); else if (k === "sa" || k === "sl" || k === "rq" || k === "rent") refreshSASide(); else refreshProposalSide();
     return;
   }
   if (d.m && UI.modal) {
     if (draftDep) { if (el.type === "file") draftDep.receipt = el.files[0] ? el.files[0].name : ""; else draftDep[d.m] = val(el); if (full || el.tagName === "SELECT" || el.type === "file") render(); else { const ev = evaluateDeposit(draftDep); $("#mcheck").innerHTML = checkList(ev.flags); } return; }
-    if (UI.rcpt) { const t = S.txns.find(x => x.id === UI.rcpt); if (el.type === "file") { t.file = el.files[0] ? el.files[0].name : ""; render(); } else if (d.m.startsWith("q.")) t.q[d.m.slice(2)] = el.value; save(); return; }
+    if (UI.rcpt) { const t = S.txns.find(x => x.id === UI.rcpt); if (!t) return; if (el.type === "file") { t.file = el.files[0] ? el.files[0].name : ""; render(); } else if (d.m.startsWith("q.")) t.q[d.m.slice(2)] = el.value; save(); return; }
   }
-  if (d.o) { const o = ORG(); o[d.o] = d.o === "hub" ? el.value.split("\n").map(x => x.trim()).filter(Boolean) : d.o === "tier" || d.o === "agencyBalance" ? +el.value : val(el); save(); if (full || el.type === "checkbox" || el.tagName === "SELECT") render(); return; }
-  if (d.r) { ORG().readiness[d.r] = val(el); if (d.r === "module" && el.checked) ORG().readiness.moduleDate = todayIso(); save(); render(); return; }
+  if (d.o) { const o = ORG(); if (!o) return; o[d.o] = d.o === "hub" ? el.value.split("\n").map(x => x.trim()).filter(Boolean) : d.o === "tier" || d.o === "agencyBalance" ? +el.value : val(el); save(); if (full || el.type === "checkbox" || el.tagName === "SELECT") render(); return; }
+  if (d.r) { if (!ORG()) return; ORG().readiness[d.r] = val(el); if (d.r === "module" && el.checked) ORG().readiness.moduleDate = todayIso(); save(); render(); return; }
   if (d.s) { const [a, b] = d.s.split("."); if (b) S.settings[a][b] = el.type === "number" ? +el.value : el.value; else S.settings[a] = +el.value; save(); if (full) render(); return; }
 }
 document.addEventListener("input", e => onField(e, false));
 document.addEventListener("change", e => { const t = e.target; if (t.tagName === "SELECT" || t.type === "checkbox") return; onField(e, true); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && UI.modal) A.closeModal(); });
-window.addEventListener("hashchange", () => { const v = location.hash.slice(1); if (v && VIEWS[v] && v !== UI.view) { const role = Object.keys(NAV).find(r => NAV[r].some(n => n[0] === v)); if (role && !NAV[S.role].some(n => n[0] === v)) S.role = role; UI.view = v; UI.saId = null; UI.modal = null; render(); } });
+window.addEventListener("hashchange", () => { const v = location.hash.slice(1); if (v && VIEWS[v] && v !== UI.view) { const role = Object.keys(NAV).find(r => NAV[r].some(n => n[0] === v)); if (role && !NAV[S.role].some(n => n[0] === v)) S.role = role; UI.view = v; UI.saId = null; UI.modal = null; save(); render(); } });
 // =====================================================================
 // Exec meeting (voice) → AI budget → submit sheet + form → auto-approve
 // → Workday Spend Authorization → AP review → card pickup
@@ -631,7 +670,7 @@ async function speak(text) {
   }
   VOICE.speaking = false; paintVoice();
 }
-function paintVoice() { const el = $("#voiceState"); if (el) el.innerHTML = voiceState(); }
+function paintVoice() { patch($("#voiceState"), voiceState()); }
 function voiceState() {
   if (VOICE.speaking) return `<span class="vdot talk"></span>FundPath is speaking${VOICE.engine ? ` · ${VOICE.engine}` : ""}`;
   if (VOICE.listening) return `<span class="vdot live"></span>Listening live${UI.interim ? `: <i>${esc(UI.interim)}</i>` : ""}`;
@@ -647,7 +686,7 @@ function heard(text, who) {
   m.transcript.push([who || UI.speaker || "Exec board", t]); save(); paintTranscript();
   if (/build (our|the|a) budget|fund ?path,? (build|make)|make (our|the) budget/i.test(t) && ["idle", "built"].includes(m.stage)) A.meetBuild();
 }
-function paintTranscript() { const el = $("#transcript"); if (!el) return; el.innerHTML = transcriptHtml(); el.scrollTop = el.scrollHeight; }
+function paintTranscript() { const el = $("#transcript"); if (!el) return; patch(el, transcriptHtml()); el.scrollTop = el.scrollHeight; }
 function transcriptHtml() {
   const m = M();
   return m.transcript.length ? m.transcript.map(([w, t]) => `<div class="tl"><b>${esc(w)}</b><span>${esc(t)}</span></div>`).join("") : `<div class="muted pad">Start the mic and run your exec meeting like normal. Talk through events, what you need and what it costs. Say <b>“FundPath, build our budget”</b> when you're done.</div>`;

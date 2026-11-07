@@ -195,12 +195,17 @@ function parseAmount(s) {
   return { amount: +(m[1] || m[2]).replace(/,/g, "") };
 }
 function parseDate(s) {
-  const t = lc(s); const now = new Date();
-  let m = t.match(/(jan|feb|mar|apr|may|jun|jul|aug|sept?|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})/);
-  let mo, d; if (m) { mo = MONTHS[m[1]]; d = +m[2]; } else { m = t.match(/\b(\d{1,2})\/(\d{1,2})\b/); if (m) { mo = +m[1]; d = +m[2]; } }
-  if (!mo) return "";
-  let y = now.getFullYear(); if (mo < now.getMonth() + 1 - 2) y++;
-  return `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  const t = lc(s).replace(/(\d)(st|nd|rd|th)\b/g, "$1"); const now = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  let mo = 0, d = 0, y = 0, m;
+  if ((m = t.match(/\b(20\d\d)[-/.](\d{1,2})[-/.](\d{1,2})\b/))) { y = +m[1]; mo = +m[2]; d = +m[3]; }
+  else if ((m = t.match(/\b(\d{1,2})\s+(?:of\s+)?(jan|feb|mar|apr|may|jun|jul|aug|sept?|oct|nov|dec)[a-z]*\.?(?:,?\s+(20\d\d))?/))) { mo = MONTHS[m[2]]; d = +m[1]; y = m[3] ? +m[3] : 0; }
+  else if ((m = t.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sept?|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})\b(?:,?\s+(20\d\d|\d\d)\b)?/))) { mo = MONTHS[m[1]]; d = +m[2]; y = m[3] ? (+m[3] < 100 ? 2000 + +m[3] : +m[3]) : 0; }
+  else if ((m = t.match(/\b(\d{1,2})[/.-](\d{1,2})(?:[/.-](20\d\d|\d\d))?\b/))) { mo = +m[1]; d = +m[2]; y = m[3] ? (+m[3] < 100 ? 2000 + +m[3] : +m[3]) : 0; }
+  if (!mo || mo > 12 || !d || d > 31) return "";
+  if (!y) { y = now.getFullYear(); if (mo < now.getMonth() + 1 - 2) y++; }
+  const dt = new Date(y, mo - 1, d); if (dt.getMonth() !== mo - 1) return "";
+  return `${y}-${pad(mo)}-${pad(d)}`;
 }
 const LEFTSTOP = ["we", "i", "our", "need", "needs", "want", "wants", "get", "buy", "also", "and", "a", "an", "the", "some", "can", "could", "to", "for", "do", "order", "bringing", "bring", "in", "maybe", "about", "around", "like", "new"];
 const RIGHTSTOP = ["for", "in", "on", "from", "so", "because", "which", "that", "to", "with"];
