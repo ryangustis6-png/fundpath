@@ -20,6 +20,7 @@ const requests = new Map();
 module.exports = async (req,res) => {
   res.setHeader('Cache-Control','no-store');
   if(req.method!=='POST') return res.status(405).json({error:'Use the quote research form.'});
+  if(!require('../public-config').paidServicesEnabled) return res.status(501).json({error:'Live quote research is paused for the cost-free demo. No external search was made.'});
   const key=process.env.ANTHROPIC_API_KEY, access=process.env.QUOTE_RESEARCH_ACCESS_CODE;
   if(process.env.QUOTE_RESEARCH_ENABLED!=='true' || !key || !access || access.length<12) return res.status(501).json({error:'Live quote research is not configured. No external search was made.'});
   const supplied=String(req.headers['x-research-code'] || '');

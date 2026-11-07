@@ -20,7 +20,7 @@ Implementation branch: `feat/seven-step-asg-demo`. No changes or merges to main.
 3. Switch to Roudebush Hall AP. Read the recommendation and fields, then make the human decision. Nothing automatically approves AP.
 4. Treasurer → Card & receipts → record physical pickup, transactions and receipts. New receipt attachments must be PNG/JPEG/WebP/PDF under 2 MB. They are stored in this browser and JSON backups; older seed receipts only contain filenames.
 5. Card & Agency balances separates the two cards from the Agency account. For Agency requests use Spend Authorization → Agency card, advisor routing if configured, then human AP. AP → Card balances & sweep → select organization → simulate semester end. Only unused allocated Agency funds return; repeated sweeps do not duplicate credits.
-6. Live ElevenLabs is optional and untested with a real account. Enable the session-only billing opt-in and supply a public demo agent ID only after checking billing. Never enter an API key. Normal demo playback uses no ElevenLabs requests. Browser speech recognition may use the browser provider's service.
+6. Live ElevenLabs remains untested with a real account and is paused by the current no-charge policy. Use pasted notes or the sample. Do not change the shared paid-services lock without separate billing verification and authorization. Never enter an API key in the browser.
 
 ## Verification
 
@@ -50,3 +50,39 @@ Find quotes collects item, destination, exact dates, full quantity and requireme
 Live quote research is disabled until an administrator configures `ANTHROPIC_API_KEY`, a supported `ANTHROPIC_MODEL` (defaults to the app’s existing `claude-sonnet-5-5`), `QUOTE_RESEARCH_ENABLED=true` and a `QUOTE_RESEARCH_ACCESS_CODE` at least 12 characters long in Vercel. The code is entered per search and is never stored in the workspace. Add project-level rate/spend limits and authentication before using this prototype widely; the in-process throttle is not a durable distributed rate limiter. No paid provider calls were made during development. API keys are never browser fields or repository files.
 
 Validation: original workflow tests; public directory parser and real public Banking Club response; cited-price/date/source validation; all role/navigation browser renders; no uppercase display words on the overview; 390/768/1440-pixel layouts; mocked voice connect/transcript/disconnect and quote-provider-disabled behavior. Real date-specific hotel/car availability and paid provider behavior remain untested until configured.
+
+## Jeff-style guided iteration — November 7, 2026
+
+The supplied HTML is a visual reference only. Its separate store, cloud database code and policy model were not imported. `journey.js` and `journey.css` replace the presentation around the existing FundPath state, evaluators and action handlers. Nick's feedback informed larger sans-serif text, fewer boxes, clearer next actions and removal of automatic read-aloud; it introduced no funding policy changes. Source attachments and private screenshot/contact details are not included in the repository.
+
+1. Meeting: one notes/sample screen, then one question at a time. Existing local extraction generates an editable draft. The supplied ElevenLabs public agent is saved; live voice is paused, so the voice-first production path remains a dependency.
+2. Organization review: profile, individual events, individual event expenses, individual other expenses, final acknowledgements and explicit demo submit. Continue moves through the items before the next section. Full original proposal sheet, imports, exports and fixes remain available.
+3. Funding decision: a separate status screen; unchanged modeled evaluator auto-approves only compliant full awards. Exceptions, denials and partial awards remain Treasury decisions in a queue with one selected proposal at a time.
+4. Authorization: a separate read-only summary of the automatically generated, matching authorization. Workday submission is simulated. Agency and other payment routes remain in the existing spending tools.
+5. Payment review: organization sees status. Accounts payable opens one request with its advisory recommendation and makes the final decision. The Continue controls never approve a payment.
+6. Pickup: organization records physical collection only after AP approval. The application does not issue a real card.
+7. Receipts: next missing receipt, dedicated purchase and receipt screens, then separate balances. Existing actual file attachment storage, ASG/Agency separation, allocation deduction and idempotent semester-end sweep remain intact.
+
+### No-charge boundary
+
+`public-config.js` locks paid services off. AI, quote research, speech and transcription endpoints return 501 before any provider request, even with credentials and research flags set. Live agent and recording UI actions are also paused. This protects activity initiated by this revision; it does not inspect or cancel subscriptions or usage elsewhere in the user's ElevenLabs account. No paid service calls were made while building or testing.
+
+### Verified
+
+- Workflow unit tests: allocation, charges, Agency sweep exactly once, role guards, compliant and noncompliant proposal routes, authorization matching, duplicate prevention, mandatory human AP and guarded pickup.
+- Integration tests: public-directory provenance, source-backed offer parser, wrong-date/unsupported-price/host rejection, secret-free configuration and all four paid endpoints locked with mock credentials configured.
+- Browser tests in installed Edge: every retained role/view, seven guided steps, five proposal sections, one item at a time, focused reviewer requests, sentence case, white theme under dark OS preference, 18px sans-serif body, 390/768/1440px widths, expandable mobile progress, public profile isolation, then a full UI path from submit through human AP, pickup, purchase, actual receipt bytes and updated balance. All external requests were blocked and none were attempted.
+
+### Still required for a live institutional service
+
+Verified no-charge ElevenLabs account/agent settings, a suitable protected live research provider, approved current institutional policy configuration, Miami-authenticated roles, shared durable storage and receipt protection, authorized Miami Central/Workday/Google integrations, and real card/account feeds. Public campus profiles alone do not prove eligibility or available funds. Main-branch changes and existing PR merge conflicts need team review; no merge or main-branch write is performed by this iteration.
+
+## Exec-team sheet review addition
+
+The user supplied the Banking Club example workbook again and requested a separate editable copy for each website user/draft. Its section/input anchors match the connected Club Funding Proposal template; neither the uploaded workbook nor private Drive file identifiers are committed to this public repository.
+
+`sheets.js` implements per-user Google authorization and Picker selection, native copy creation in the user's own Drive, verified edit access, input-only filling, native readback and explicit exec-review confirmation before demo submit. Revisions create a new copy, preserving earlier team edits. Failed fills retain an honest incomplete-copy link. Formula/format cells are not rewritten, old sample data is cleared and submission/committee confirmations are reset. Tier/worktag changes require explicit profile verification; unfamiliar categories still encounter the existing evaluator. Quote evidence is invalidated when its expense changes. A last read blocks submission when collaborators edit after confirmation. No public sharing, ownership transfer, Google Form submission or Workday submission occurs.
+
+Live site configuration is still missing: Google OAuth client, restricted Picker key and project number. The connected Drive tool in this chat is not the website's Google authorization. A local-demo review remains available and is labeled as local rather than a shared Google Sheet. No real Google copies or paid calls were created in these tests.
+
+Verification includes the model tests plus real browser actions against a mocked Google network boundary: two separate new IDs, no write to source or previous copy, verified fill/readback, imported team price changes, blocked stale confirmation, reviewed current value in the AP-bound authorization and no token in browser storage. The complete local UI flow also passes with exec review, mandatory human AP, physical pickup confirmation, purchase, actual receipt bytes and balance reconciliation.

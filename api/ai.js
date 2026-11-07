@@ -16,6 +16,7 @@ async function claude(system, user, maxTokens = 600) {
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
+  if (!require('../public-config').paidServicesEnabled) return res.status(501).json({ error: "Live AI is paused for the cost-free demo. No provider request was made." });
   if (!process.env.ANTHROPIC_API_KEY) return res.status(501).json({ error: "AI not configured" });
   try {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
