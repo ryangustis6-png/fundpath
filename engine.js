@@ -217,6 +217,7 @@ function itemLabel(sentence, re, hub) {
   while (b + 1 < toks.length && !/[,.?!]$/.test(toks[b]) && !RIGHTSTOP.includes(lc(clean(toks[b + 1]))) && !/[$\d]/.test(toks[b + 1])) b++;
   let words = toks.slice(a, b + 1).map(clean).filter(Boolean);
   while (words.length && ["at", "and", "of"].includes(lc(words[words.length - 1]))) words.pop();
+  while (words.length > 1 && ["of", "about", "around", "some"].includes(lc(words[0]))) words.shift();
   const x = words.join(" ");
   return x.charAt(0).toUpperCase() + x.slice(1);
 }
@@ -409,6 +410,28 @@ function applyFix(p, org, d) {
   }
 }
 
+function autoFixProposal(p, org, S, opts = {}) {
+  const changes = [];
+  let guard = 80;
+  while (guard--) {
+    const ev = evaluateProposal(p, org, S);
+    const f = ev.flags.find(z => z.fix && !["focus", "org", "ack", "quote"].includes(z.fix.type) && !(z.fix.type === "comment" && z.rule === "LIMFOOD"));
+    if (!f) break;
+    const l = f.line ? p.lines.find(z => z.id === f.line) : null; const e = f.event ? p.events.find(z => z.id === f.event) : null;
+    const before = l ? +l.amount : 0; const oldName = e ? e.name : "";
+    applyFix(p, org, { type: f.fix.type, line: f.line, event: f.event, ids: f.fix.ids, value: f.fix.value });
+    const why = f.msg;
+    if (f.fix.type === "remove") changes.push({ kind: "removed", what: l ? `${l.item} (${money(before)})` : "line", why, rule: f.rule });
+    else if (f.fix.type === "cap") changes.push({ kind: "capped", what: `Capped at ${money(+f.fix.value)}`, why, rule: f.rule });
+    else if (f.fix.type === "delEvent") changes.push({ kind: "dropped", what: `Event "${e ? e.name : ""}"`, why: "Nothing fundable left for it", rule: f.rule });
+    else if (f.fix.type === "hubname") changes.push({ kind: "renamed", what: `"${oldName}" → "${f.fix.value}"`, why, rule: f.rule });
+    else if (f.fix.type === "comment") changes.push({ kind: "wrote", what: `Comment for ${l ? l.item : "line"}`, why: "ASG asks how each line serves students", rule: f.rule });
+    else if (f.fix.type === "purpose") changes.push({ kind: "wrote", what: "Purpose statement", why: "Criterion 7", rule: f.rule });
+  }
+  if (opts.comments) p.lines.forEach(l => { if ((l.comment || "").trim().length < 15 || opts.comments === "all") { l.said = l.comment; applyFix(p, org, { type: "comment", line: l.id }); } });
+  return changes;
+}
+
 // AI budget builder: meeting transcript -> ASG proposal that follows every rule.
 // It removes what ASG won't fund, caps what's over a limit, fixes names and writes comments.
 // It never invents a quote: anything still missing stays flagged for a person.
@@ -416,26 +439,10 @@ function aiBuildBudget(text, org, S) {
   const x = extractFromTranscript(text, org);
   const p = { id: "draft", orgId: org.id, semester: S.semester, prior: 0, ack: {}, purpose: "", events: x.events, lines: x.lines };
   const heard = cents(p.lines.reduce((t, l) => t + +l.amount, 0));
-  const changes = [];
-  let guard = 80;
-  while (guard--) {
-    const ev = evaluateProposal(p, org, S);
-    const f = ev.flags.find(z => z.fix && !["focus", "org", "ack", "quote"].includes(z.fix.type));
-    if (!f) break;
-    const l = f.line ? p.lines.find(z => z.id === f.line) : null; const e = f.event ? p.events.find(z => z.id === f.event) : null;
-    const before = l ? +l.amount : 0;
-    applyFix(p, org, { type: f.fix.type, line: f.line, event: f.event, ids: f.fix.ids, value: f.fix.value });
-    const why = f.msg;
-    if (f.fix.type === "remove") changes.push({ kind: "removed", what: l ? `${l.item} (${money(before)})` : "line", why, rule: f.rule });
-    else if (f.fix.type === "cap") changes.push({ kind: "capped", what: `Capped at ${money(+f.fix.value)}`, why, rule: f.rule });
-    else if (f.fix.type === "delEvent") changes.push({ kind: "dropped", what: `Event "${e ? e.name : ""}"`, why: "Nothing fundable left for it", rule: f.rule });
-    else if (f.fix.type === "hubname") changes.push({ kind: "renamed", what: `"${e ? e.name : ""}" → "${f.fix.value}"`, why, rule: f.rule });
-    else if (f.fix.type === "comment") changes.push({ kind: "wrote", what: `Comment for ${l ? l.item : "line"}`, why: "ASG asks how each line serves students", rule: f.rule });
-    else if (f.fix.type === "purpose") changes.push({ kind: "wrote", what: "Purpose statement", why: "Criterion 7", rule: f.rule });
-  }
+  const changes = autoFixProposal(p, org, S);
   p.lines.forEach(l => { l.said = l.comment; applyFix(p, org, { type: "comment", line: l.id }); });
   const ev = evaluateProposal(p, org, S);
   return { p, changes, heard, ev, extracted: x };
 }
 
-if (typeof module !== "undefined") module.exports = { evaluateProposal, evaluateSpend, evaluateDeposit, ledgerFor, tasksFor, ownerOf, money, extractFromTranscript, eventPct, orgStanding, workdayPayload, applyFix, aiBuildBudget };
+if (typeof module !== "undefined") module.exports = { evaluateProposal, evaluateSpend, evaluateDeposit, ledgerFor, tasksFor, ownerOf, money, extractFromTranscript, eventPct, orgStanding, workdayPayload, applyFix, aiBuildBudget, autoFixProposal };

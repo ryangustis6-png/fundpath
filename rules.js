@@ -129,7 +129,7 @@ const DEFAULT_SETTINGS = {
   globalCycle: 10000, admin: 1000, adminSR: 1500, speakers: 3000, speakersSR: 7000,
   hotelPerRoomNight: 130, perRoom: 4, hotelPerPerson: 50, flightPerPerson: 200, quoteOver: 1000, capitalQuoteOver: 300,
   justifyOver: 250, saCutoff: "2027-06-01",
-  advisorPreauth: true,
+  advisorPreauth: true, straightThrough: true,
   breaks: [
     { name: "Thanksgiving break", start: "2026-11-25", end: "2026-11-29" },
     { name: "Winter break", start: "2026-12-19", end: "2027-01-25" },

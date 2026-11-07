@@ -2,8 +2,10 @@
 const KEY = "fundpath-v5";
 let S;
 let UI = { view: "home", modal: null, threadId: null, busy: false, saId: null, open: null, confirmSubmit: false };
-function load() { try { const raw = localStorage.getItem(KEY); if (raw) { const s = JSON.parse(raw); if (s.v === 5) { S = s; return; } } } catch (e) {} S = seedState(); }
-function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+const MODE_KEY = "fundpath-mode", REAL_KEY = "fundpath-real-v1";
+function curMode() { try { return localStorage.getItem(MODE_KEY) || "demo"; } catch (e) { return "demo"; } }
+function load() { const mode = curMode(); try { const raw = localStorage.getItem(mode === "real" ? REAL_KEY : KEY); if (raw) { const s = JSON.parse(raw); if (s.v === 5) { S = s; S.mode = mode; return; } } } catch (e) {} S = mode === "real" ? seedReal() : seedState(); S.mode = mode; }
+function save() { try { localStorage.setItem(S.mode === "real" ? REAL_KEY : KEY, JSON.stringify(S)); } catch (e) {} }
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const $ = s => document.querySelector(s);
 const ORG = () => S.orgs.find(o => o.id === S.orgId);
@@ -27,9 +29,10 @@ const lvl = l => l === "deny" ? `<span class="lv deny">Fails</span>` : l === "wa
 const ruleTag = id => { const r = RULES[id]; if (!r) return ""; return `<button class="rtag ${r.kind}" data-a="showRule" data-id="${id}">${esc(r.title)}<i>${r.kind}</i></button>`; };
 
 function render() {
+  if (S.mode === "real" && !S.orgs.length && S.role !== "asg") { renderSetupShell(); return; }
   const role = S.role, nav = NAV[role];
   if (!nav.some(n => n[0] === UI.view)) UI.view = nav[0][0];
-  const o = ORG();
+  const o = ORG() || S.orgs[0] || {};
   const badge = v => {
     let n = 0, cls = "";
     if (v === "card") n = S.txns.filter(t => t.orgId === o.id && !t.receiptDone).length + S.spend.filter(x => x.orgId === o.id && x.kind === "SA" && x.status === "approved").length, cls = "amber";
@@ -41,23 +44,33 @@ function render() {
     if (v === "inbox") n = S.threads.filter(t => t.status === "open").length, cls = "amber";
     return n ? `<b class="nb ${cls}">${n}</b>` : "";
   };
+  const initials = x => String(x || "?").replace(/^Miami University /, "").split(/\s+/).filter(w => /^[A-Z]/.test(w)).slice(0, 2).map(w => w[0]).join("") || "?";
+  const me = role === "treasurer" ? (o.treasurer || "Treasurer") : role === "advisor" ? "Advisor" : "ASG Financial Services";
+  const groupHead = role === "treasurer"
+    ? `<div class="grp"><div class="grp-av">${esc(initials(o.name))}</div><div class="grp-t"><small>Group admin</small>${S.orgs.length > 1 ? `<select data-a2="pickOrg" class="grp-sel">${S.orgs.map(x => `<option value="${x.id}" ${x.id === o.id ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select>` : `<b>${esc(o.name)}</b>`}<span>Tier ${TIER_ROMAN[o.tier] || "?"} · ${esc(o.worktag || "")}</span></div></div>`
+    : `<div class="grp"><div class="grp-av alt">${role === "asg" ? "ASG" : "ADV"}</div><div class="grp-t"><small>${role === "asg" ? "Office admin" : "Advisor"}</small><b>${role === "advisor" ? "Org advisors" : "ASG Funding + Accounts Payable"}</b><span>${S.orgs.length} organizations</span></div></div>`;
   $("#app").innerHTML = `
-  <aside class="side">
-    <div class="brand"><div class="logo">F</div><div><b>FundPath</b><small>for Miami Central · ASG funding</small></div></div>
-    <div class="role three">
-      <button class="${role === "treasurer" ? "on" : ""}" data-a="role" data-r="treasurer">Treasurer</button>
-      <button class="${role === "advisor" ? "on" : ""}" data-a="role" data-r="advisor">Advisor</button>
-      <button class="${role === "asg" ? "on" : ""}" data-a="role" data-r="asg">ASG / AP</button>
+  <header class="topbar">
+    <a class="tb-brand" href="#${nav[0][0]}"><span class="tb-logo">F</span><span><b>FundPath</b><small>for Miami Central</small></span></a>
+    <nav class="tb-nav"><a href="#${role === "treasurer" ? "home" : nav[0][0]}" class="on">Funding</a><a href="#help">Help</a><a href="#resources">Resources</a><a href="#rules">Rules</a></nav>
+    <div class="tb-search"><input placeholder="Search rules, events, authorizations…" data-a2="search" value="${esc(UI.q || "")}"></div>
+    <div class="tb-right">
+      <div class="seg" title="Switch view (demo)">${[["treasurer", "Treasurer"], ["advisor", "Advisor"], ["asg", "ASG / AP"]].map(([r, l]) => `<button class="${role === r ? "on" : ""}" data-a="role" data-r="${r}">${l}</button>`).join("")}</div>
+      <span class="mode ${S.mode === "real" ? "real" : ""}" data-a="modeMenu" title="Data">${S.mode === "real" ? "My club data" : "Demo data"}</span>
+      <span class="tb-av" title="${esc(me)}">${esc(initials(me))}</span>
     </div>
-    ${role === "treasurer" ? `<label class="orgpick">Organization<select data-a2="pickOrg">${S.orgs.map(x => `<option value="${x.id}" ${x.id === o.id ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select></label>`
-      : `<div class="orgpick"><span>Signed in as</span><b>${role === "advisor" ? "Org advisors (demo)" : "ASG Financial Services + Accounts Payable"}</b></div>`}
+  </header>
+  <div class="shell">
+  <aside class="side">
+    ${groupHead}
     <nav>${nav.map(([v, l]) => `<a href="#${v}" class="${UI.view === v ? "on" : ""}">${l}${badge(v)}</a>`).join("")}</nav>
-    <div class="sidefoot"><button class="link" data-a="reset">Reset demo data</button><small>${esc(S.settings.semester)} · proposals close ${fmtD(S.settings.window.close)}</small></div>
+    <div class="sidefoot"><button class="link" data-a="${S.mode === "real" ? "modeMenu" : "reset"}">${S.mode === "real" ? "Back up or switch data" : "Reset demo data"}</button><small>${esc(S.settings.semester)} · ${esc(S.settings.cycle || "")} closes ${fmtD(S.settings.window.close)}</small></div>
   </aside>
-  <main id="main">${role === "treasurer" ? cardReadyBanner(o) : ""}${VIEWS[UI.view]()}</main>
+  <main id="main">${role === "treasurer" && o.id ? cardReadyBanner(o) : ""}${VIEWS[UI.view]()}</main>
+  </div>
+  ${voiceDock()}
   ${UI.modal ? `<div class="scrim" data-a="closeModal"></div><div class="modal">${UI.modal()}</div>` : ""}`;
 }
-
 function readinessHtml(o) {
   const r = o.readiness || {};
   const items = [
@@ -707,7 +720,7 @@ function viewMeeting() {
 }
 function cardReadyBanner(o) {
   const s = S.spend.find(x => x.orgId === o.id && x.kind === "SA" && x.status === "approved"); if (!s) return "";
-  return `<div class="banner card-ready"><div><b>Your card is ready.</b> Accounts Payable approved ${s.id} and loaded ${money(s.lines.reduce((t, l) => t + spendLineAmt(l), 0))}. Pick it up at AP, 107 Roudebush Hall.</div><button class="btn" data-a="cardGo" data-id="${s.id}">Get the card →</button></div>`;
+  return `<div class="banner card-ready"><div><b>Your card is ready.</b> ${(s.history || []).some(h => /straight-through/.test(h.who)) ? `FundPath approved ${s.id} automatically (every check passed) and` : `Accounts Payable approved ${s.id} and`} loaded ${money(s.lines.reduce((t, l) => t + spendLineAmt(l), 0))}. Pick it up at AP, 107 Roudebush Hall.</div><button class="btn" data-a="cardGo" data-id="${s.id}">Get the card →</button></div>`;
 }
 function cardModal(id) {
   const s = S.spend.find(x => x.id === id); const o = orgById(s.orgId); const total = s.lines.reduce((t, l) => t + spendLineAmt(l), 0);
@@ -791,6 +804,9 @@ function materialize(bp, o, status) {
 document.addEventListener("submit", e => { const f = e.target.closest("[data-a2=meetType]"); if (!f) return; e.preventDefault(); const i = $("#meetIn"); heard(i.value); i.value = ""; i.focus(); });
 document.addEventListener("change", e => { if (e.target.dataset && e.target.dataset.a2 === "speaker") UI.speaker = e.target.value; });
 
+function boot() {
 load();
 { const v = location.hash.slice(1); if (v && VIEWS[v]) { const role = Object.keys(NAV).find(r => NAV[r].some(n => n[0] === v)); if (role && !NAV[S.role].some(n => n[0] === v)) S.role = role; UI.view = v; } }
 render();
+}
+window.addEventListener("DOMContentLoaded", boot);

@@ -3,8 +3,10 @@ const DEMO_MEETING = [
   ["President", "Alright, let's lock our Cycle 2 ASG budget before the deadline."],
   ["VP Programming", "For Speaker Meetings, we're bringing in three alumni speakers at $500 each for honoraria. We already have written quotes from all three, and it's in Farmer, free and open to all students."],
   ["Treasurer", "Speaker Meetings is on December 2nd."],
+  ["VP Programming", "We might add a fourth speaker from Jefferies for Speaker Meetings, $400."],
   ["VP Education", "The Valuation Workshop is December 4th in Farmer, open to everyone, and it's a hands-on modeling session. We want sample-size snacks for about $250 so people stay through the case study."],
   ["VP Marketing", "Flyers and posters for the Valuation Workshop, $120."],
+  ["VP Education", "We'll also need about $100 of supplies for the Valuation Workshop."],
   ["VP Education", "And tablecloths and table decorations for the Valuation Workshop, about $80."],
   ["Treasurer", "For the club in general, we need software subscriptions like Canva and PitchBook for $450."],
   ["President", "We also need a new banner for the involvement fair, $150."],
@@ -13,6 +15,14 @@ const DEMO_MEETING = [
   ["VP Social", "And drinks at Brick Street for Club Socials, $300."],
   ["President", "Okay FundPath, build our budget."]
 ];
+// Scripted answers the demo playback gives to FundPath's clarifying questions
+const DEMO_ANSWERS = { quote: ["VP Programming", "Yes, Jefferies sent the quote in writing."], itemize: ["VP Education", "Financial calculators and printed case packets for the workshop."], food: ["VP Education", "Yes, sample-size, during the session."], date: ["Treasurer", "Not set yet."], hub: ["President", "No, drop it."] };
+
+// Empty workspace for a real club: no fake orgs, proposals or spending
+function seedReal() {
+  const S = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+  return { v: 5, mode: "real", role: "treasurer", orgId: null, settings: S, orgs: [], proposals: [], spend: [], txns: [], deposits: [], threads: [], log: [], meeting: { transcript: [], built: null, stage: "idle", pipe: [] } };
+}
 function seedState() {
   const S = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
   const ok = { hub: true, terms: true, module: true, moduleDate: "2026-08-26", access: "approved" };
