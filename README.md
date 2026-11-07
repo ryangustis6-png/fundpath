@@ -79,3 +79,7 @@ Workday is simulated in this demo. Each Spend Authorization has the exact `Submi
 ## Limits FundPath enforces
 
 Source: ASG Funding Committee Standing Rules 2025–2026 and the ASG proposal template. When they differ, FundPath enforces the stricter one and cites both. Tier IV is $5,000/semester. Speakers are capped at $3,000 (template; SR §11.2 allows $7,000). Food by tier is $500/$750/$1,000. Promotional materials are $150/event, decorations $250/event, organizational materials $600/semester, banners $200/semester, electronics $2,000. See the Rules page for the full list.
+
+## Campus, voice and quote research
+
+Open **Campus & voice** to look up public Miami Central organization details or connect a public ElevenLabs conversational agent. Read **[WORKFLOW_AUDIT.md](WORKFLOW_AUDIT.md)** for configuration and limitations. **Find quotes** researches source-backed offers only when a live search provider is explicitly configured; no hotel/car prices or attachments are invented. Live voice and search can use billable credits and remain off until explicitly enabled.
