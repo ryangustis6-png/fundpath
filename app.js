@@ -602,7 +602,7 @@ window.addEventListener("hashchange", () => { const v = location.hash.slice(1); 
 // → Workday Spend Authorization → AP review → card pickup
 // =====================================================================
 let liveElevenLabsEnabled = false; // Session-only opt-in; never enabled by a stored workspace.
-const VOICE = { on: true, rec: null, listening: false, speaking: false, media: null, chunks: [], recording: false, playing: false };
+const VOICE = { on: false, rec: null, listening: false, speaking: false, media: null, chunks: [], recording: false, playing: false };
 const wdRef = () => "SPA-" + String(Math.floor(100000 + Math.random() * 899999));
 const EXEC = ["President", "Treasurer", "VP Events", "VP Marketing", "Exec board"];
 const sleep = ms => new Promise(r => setTimeout(r, ms));

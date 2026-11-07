@@ -3,7 +3,13 @@
 **Miami University ASG funding and student org spending, in one place.**
 Built at Redhawk Builds 2026.
 
-Live: https://fundpath-lemon.vercel.app
+Feature work is reviewed in draft pull request https://github.com/ryangustis6-png/fundpath/pull/2 . A previously deployed site may show an older revision; these changes do not promote a production deployment.
+
+## Guided demo iteration
+
+The organization starts with one **Continue** action. Jeff's supplied numbered rail and compact role switch guide the seven-step process on white surfaces with red actions, larger sans-serif text and sentence-case labels. Each proposal section, event and expense gets its own screen. Purchase entry and receipt upload also have dedicated screens. The full sheet, imports, exports, Agency requests and other existing tools remain in **More tools**. Reviewers choose one request before seeing its decision controls.
+
+**No paid services are enabled.** The supplied ElevenLabs agent ID is saved, but live calls, transcription, speech generation, hosted model requests and quote research are paused by the shared `PAID_SERVICES_ENABLED = false` setting in `public-config.js`. Backend endpoints reject provider work even if environment credentials exist. No billing or subscription settings are changed. This does not verify or cancel any existing subscription outside FundPath. Use pasted notes or the sample meeting; draft extraction uses the existing local rules, not a live model. Quote estimates are never represented as verified supplier offers.
 
 ## The problem
 
@@ -32,7 +38,7 @@ It's a static site with no build step:
 npx serve .        # or: python3 -m http.server
 ```
 
-Optional AI: deploy to Vercel and set `ANTHROPIC_API_KEY`. `api/ai.js` handles the Funding Help answers. Without a key, the app falls back to rule-matched answers.
+Hosted AI is paused for this no-charge iteration. Funding Help uses its existing local rule-matched fallback.
 
 ## Files
 
@@ -51,7 +57,7 @@ Demo data lives in the browser (localStorage). "Reset demo data" is in the sideb
 
 See [WORKFLOW_AUDIT.md](WORKFLOW_AUDIT.md) for the seven-step audit, demo walkthrough, verification and remaining integration dependencies. Every institutional submission and balance change is simulated. AP always makes the final decision in the dedicated Roudebush Hall portal.
 
-Live ElevenLabs use is disabled on every page load. The meeting page requires an explicit session-only billing opt-in before live speech, transcription or conversation. Check your ElevenLabs plan before enabling it. The built-in meeting demo works without ElevenLabs requests.
+Live ElevenLabs, hosted AI and quote research are locked off in this revision. The supplied agent ID remains saved. The built-in meeting demo works without provider requests.
 
 ## Other features
 
@@ -69,8 +75,8 @@ Today each workspace lives in the browser (with JSON backup). For every club on 
 
 ## Optional environment variables (Vercel)
 
-- `ELEVENLABS_API_KEY` (and optional `ELEVENLABS_VOICE_ID`): FundPath's spoken voice (`/api/tts`) and recorded-meeting transcription (`/api/stt`). Without it, the browser's built-in voice is used.
-- `ANTHROPIC_API_KEY`: AI answers in Funding Help.
+- `ELEVENLABS_API_KEY` (and optional `ELEVENLABS_VOICE_ID`): reserved for future explicitly authorized speech and transcription. Paused in this iteration, even with credentials.
+- `ANTHROPIC_API_KEY`: reserved for future explicitly authorized hosted answers and research. Paused in this iteration, even with credentials. Local answers remain available.
 
 ## Workday
 
@@ -82,4 +88,16 @@ Source: ASG Funding Committee Standing Rules 2025–2026 and the ASG proposal te
 
 ## Campus, voice and quote research
 
-Open **Campus & voice** to look up public Miami Central organization details or connect a public ElevenLabs conversational agent. Read **[WORKFLOW_AUDIT.md](WORKFLOW_AUDIT.md)** for configuration and limitations. **Find quotes** researches source-backed offers only when a live search provider is explicitly configured; no hotel/car prices or attachments are invented. Live voice and search can use billable credits and remain off until explicitly enabled.
+Open **More tools → Campus & voice** for source-labeled public Miami Central reference information and the saved agent identifier. Read **[WORKFLOW_AUDIT.md](WORKFLOW_AUDIT.md)** for the workflow and remaining dependencies. Existing quote research keeps its source and date checks, but live research is paused to honor the no-charge constraint. No hotel/car prices or attachments are invented.
+
+## Editable Google review copies
+
+After reviewing the individual budget items, the user reaches **Exec-team sheet review** before any demo submission. With Google configured, each website user connects their own Google account, chooses their proposal template/example once per session, and creates a new filled native copy. The copy is created in that user's Drive root, with edit capability verified. The template is never written to. The website does not publish the copy or transfer ownership. The owner can use Google Sheets' own sharing controls for the exec team.
+
+The native cell mapping was checked against the user-supplied Banking Club example and the connected native template. It preserves formulas, validation, layout and formatting and clears prior example inputs and submission/committee confirmations. The template's original policy text is retained as source material; its dates and policy version must be checked against current institutional guidance. Oversized drafts are stopped before copying.
+
+After team edits, **Read back the team's edits** imports current values into FundPath and rechecks the budget. Changed prices/items invalidate old quote evidence. The user confirms exec review explicitly. Submission re-reads a connected sheet and stops if it changed after confirmation. Local draft changes also invalidate the confirmation. No Google Form or Workday request is sent.
+
+Site setup requires public `GOOGLE_CLIENT_ID`, origin-restricted `GOOGLE_PICKER_API_KEY` and `GOOGLE_PROJECT_NUMBER` from the same Google project, enabled Drive/Sheets/Picker APIs and permitted website origins. No client secret, service-account key or refresh token belongs in this app. The browser requests only `drive.file`; access tokens stay in memory and are never stored with the workspace. No Google project, billing account or paid service is created by this code change. Until configured, the interface clearly says no live sheet exists and offers Excel download and an explicitly labeled local-demo review.
+
+References: [Google user token model](https://developers.google.com/identity/oauth2/web/guides/use-token-model), [Picker setup](https://developers.google.com/workspace/drive/picker/guides/web-picker-sample), [native file copies](https://developers.google.com/workspace/drive/api/reference/rest/v3/files/copy), [Sheets batch updates](https://developers.google.com/workspace/sheets/api/reference/rest/v4/spreadsheets/batchUpdate).
