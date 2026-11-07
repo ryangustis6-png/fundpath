@@ -66,7 +66,8 @@ function render() {
     <nav>${nav.map(([v, l]) => `<a href="#${v}" class="${UI.view === v ? "on" : ""}">${l}${badge(v)}</a>`).join("")}</nav>
     <div class="sidefoot"><button class="link" data-a="${S.mode === "real" ? "modeMenu" : "reset"}">${S.mode === "real" ? "Back up or switch data" : "Reset demo data"}</button><small>${esc(S.settings.semester)} · ${esc(S.settings.cycle || "")} closes ${fmtD(S.settings.window.close)}</small></div>
   </aside>
-  <main id="main">${role === "treasurer" && o.id ? cardReadyBanner(o) : ""}${VIEWS[UI.view]()}</main>
+  <main id="main"><div class="crumbs">Miami Central <span>/</span> ${role === "treasurer" ? esc(o.name || "") : role === "asg" ? "ASG Funding Committee" : "Advisors"} <span>/</span> ${esc((nav.find(n => n[0] === UI.view) || ["", ""])[1])}</div>${role === "treasurer" && o.id ? cardReadyBanner(o) : ""}${VIEWS[UI.view]()}
+  <footer class="foot"><div><b>FundPath</b> · ASG funding and student organization spending</div><div>Rules sourced from the ASG Funding Committee Standing Rules 2025–2026, the ASG Club Funding Proposal, and SEA Student Org Finance Training. Questions: asgfunding@miamioh.edu · Accounts Payable, 107 Roudebush Hall.</div><div class="muted">Student-built for Redhawk Builds 2026. Not an official Miami University system.</div></footer></main>
   </div>
   ${voiceDock()}
   ${UI.modal ? `<div class="scrim" data-a="closeModal"></div><div class="modal">${UI.modal()}</div>` : ""}`;
@@ -75,7 +76,7 @@ function readinessHtml(o) {
   const r = o.readiness || {};
   const items = [
     ["Red Brick Rewards tier", o.redBrick ? `Tier ${o.tier} · $${(S.settings.tierMax[o.tier] || 0).toLocaleString()}/semester max` : "Not on record", !!o.redBrick, "Miami Central"],
-    ["Listed as treasurer on the Hub", r.hub ? esc(o.treasurer) : "Not listed", !!r.hub, "Miami Central"],
+    ["Listed as treasurer on Miami Central", r.hub ? esc(o.treasurer) : "Not listed", !!r.hub, "Miami Central"],
     ["Accepted treasurer terms", r.terms ? "Accepted" : "Not accepted", !!r.terms, "Miami Central"],
     ["Workday access module (annual)", r.module ? `Completed ${fmtD(r.moduleDate)}` : "Not completed", !!r.module, "Canvas"],
     ["Workday access request", r.access === "approved" ? "Approved by SEA" : r.access === "pending" ? "Waiting on SEA review" : "Not submitted", r.access === "approved", "TeamDynamix"]
@@ -151,7 +152,7 @@ function viewProposal() {
       <section class="card"><h2>Step 1 · Club info <small class="muted">pulled from Miami Central. Fix anything wrong in Org & eligibility.</small></h2>
         <div class="kvs">${f1("Organization", o.name, !!o.name)}${f1("Entity email", o.entityEmail, /@miamioh\.edu$/.test(o.entityEmail || ""))}${f1("Tier status", `Tier ${o.tier} (${money(S.settings.tierMax[o.tier])}/semester max)`, !!o.redBrick)}${f1("President", `${o.president} · ${o.presidentEmail}`, !!o.president)}${f1("Treasurer", `${o.treasurer} · ${o.treasurerEmail}`, !!o.treasurer)}${f1("Advisor", o.advisor, !!o.advisor)}${f1("SA1####", o.worktag, /^SA1\d{4}$/.test(o.worktag || ""))}</div>
         <label class="inline">ASG funding already received this semester<input type="number" min="0" data-f="p:prior" value="${esc(p.prior)}" ${dis}></label>
-        <div class="acks">${[["hub", "Events and trips are listed on the HUB"], ["itemized", "Budget is itemized into specific expenses"], ["quotes", "Quotes attached for hotels, flights and items over $1,000"], ["noGuarantee", "Eligibility doesn't guarantee approval"]].map(([k, t]) => `<label class="check"><input type="checkbox" data-f="ack:${k}" ${(p.ack || {})[k] ? "checked" : ""} ${dis}> ${t}</label>`).join("")}</div>
+        <div class="acks">${[["hub", "Events and trips are registered on Miami Central"], ["itemized", "Budget is itemized into specific expenses"], ["quotes", "Quotes attached for hotels, flights and items over $1,000"], ["noGuarantee", "Eligibility doesn't guarantee approval"]].map(([k, t]) => `<label class="check"><input type="checkbox" data-f="ack:${k}" ${(p.ack || {})[k] ? "checked" : ""} ${dis}> ${t}</label>`).join("")}</div>
       </section>
       <section class="card"><h2>Step 2 · Events and trips <small class="muted">names must exactly match Miami Central (SR §6.2.1)</small></h2>
         <table class="tbl items"><thead><tr><th>Type</th><th>Name (exactly as on Miami Central)</th><th>Start</th><th>End</th><th>Event criteria (25% each, SR §11.1)</th><th>Miami Central</th>${ro ? "" : "<th></th>"}</tr></thead><tbody>
@@ -414,10 +415,10 @@ function viewOrg() {
   return `<header class="ph"><div><h1>Org & eligibility</h1><p>In production these sync from Miami Central, Canvas and Workday. Edit here for the demo.</p></div></header>
   <section class="card"><h2>Step 1 info</h2><div class="grid3">${inp("name", "Organization")}${inp("entityEmail", "Entity email")}<label>Red Brick tier<select data-o="tier">${[1, 2, 3, 4].map(n => `<option value="${n}" ${n == o.tier ? "selected" : ""}>Tier ${n} · ${money(S.settings.tierMax[n])} max</option>`).join("")}</select></label>${inp("president", "President")}${inp("presidentEmail", "President email")}${inp("worktag", "SA1####")}${inp("treasurer", "Treasurer")}${inp("treasurerEmail", "Treasurer email")}${inp("advisor", "Advisor")}</div>
   <label>Mission (from constitution)<textarea data-o="mission" rows="2">${esc(o.mission)}</textarea></label>
-  <label>Events on the HUB (one per line)<textarea data-o="hub" rows="3">${esc((o.hub || []).join("\n"))}</textarea></label>
+  <label>Events registered on Miami Central (one per line)<textarea data-o="hub" rows="3">${esc((o.hub || []).join("\n"))}</textarea></label>
   <div class="row"><label class="check"><input type="checkbox" data-o="redBrick" ${o.redBrick ? "checked" : ""}> Red Brick tier on record</label><label class="check"><input type="checkbox" data-o="penalty" ${o.penalty ? "checked" : ""}> Active ASG penalty</label><label>Agency balance<input type="number" data-o="agencyBalance" value="${o.agencyBalance}"></label></div></section>
   <section class="card"><h2>Treasurer authorization ${ruleTag("TRAINING")}</h2>${readinessHtml(o)}
-  <div class="row"><label class="check"><input type="checkbox" data-r="hub" ${r.hub ? "checked" : ""}> Listed on the Hub</label><label class="check"><input type="checkbox" data-r="terms" ${r.terms ? "checked" : ""}> Terms accepted</label><label class="check"><input type="checkbox" data-r="module" ${r.module ? "checked" : ""}> Workday module done</label><label>Access request<select data-r="access">${["none", "pending", "approved"].map(x => `<option ${x === r.access ? "selected" : ""}>${x}</option>`).join("")}</select></label></div></section>`;
+  <div class="row"><label class="check"><input type="checkbox" data-r="hub" ${r.hub ? "checked" : ""}> Listed on Miami Central</label><label class="check"><input type="checkbox" data-r="terms" ${r.terms ? "checked" : ""}> Terms accepted</label><label class="check"><input type="checkbox" data-r="module" ${r.module ? "checked" : ""}> Workday module done</label><label>Access request<select data-r="access">${["none", "pending", "approved"].map(x => `<option ${x === r.access ? "selected" : ""}>${x}</option>`).join("")}</select></label></div></section>`;
 }
 
 function viewRules() {

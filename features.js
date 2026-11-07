@@ -120,7 +120,7 @@ function viewMeeting2() {
     ${m.pipe.length ? `<section class="card"><h2>Submission</h2><ol class="pipe-v">${m.pipe.map(x => `<li class="${x.done ? (x.warn ? "warn" : "done") : "now"}"><i>${x.done ? (x.warn ? "!" : "✓") : ""}</i><div><b>${esc(x.t)}</b><span>${x.d || ""}</span></div></li>`).join("")}</ol>
       ${m.conf ? `<h3>Approval check</h3><ul class="conf">${m.conf.map(c => `<li class="${c.ok ? "ok" : "no"}"><i>${c.ok ? "✓" : "✕"}</i>${esc(c.t)}</li>`).join("")}</ul>` : ""}
       ${m.stage === "done" ? `<div class="mf"><span class="muted small">${m.outcome === "auto" ? "Nothing else needs an approval." : "Only the items above need a person."}</span><span>${m.outcome === "auto" ? `<button class="btn" data-a="go" data-id="card">Get the card →</button>` : `<button class="btn" data-a="meetToAP">Open ASG / AP view →</button>`}</span></div>` : ""}</section>` : ""}
-    ${b.p ? `${sheetPreview(b.p, o)}${formPreview(b.p, o)}` : ""}`;
+    ${b.p ? `<details class="collapse card" ${["running", "done"].includes(m.stage) ? "" : ""}><summary>See the filled ASG proposal sheet and funding form</summary>${sheetPreview(b.p, o)}${formPreview(b.p, o)}</details>` : ""}`;
   return `<header class="ph"><div><p class="eyebrow">${esc(o.name)} · Tier ${TIER_ROMAN[o.tier]}</p><h1>Exec meeting</h1><p>${esc(S.settings.semester)} ${esc(S.settings.cycle || "")} · ASG proposals close ${fmtD(S.settings.window.close)} · ${money(S.settings.tierMax[o.tier])} semester limit</p></div>
     <div class="ph-actions"><label class="check vt"><input type="checkbox" data-a="voiceOn" ${VOICE.on ? "checked" : ""}> Spoken replies</label><button class="btn ghost" data-a="meetReset">New meeting</button></div></header>
   <div class="meet">
@@ -222,8 +222,8 @@ function voiceDock() {
   return `<div class="dock ${DOCK.open ? "open" : ""}">
     ${DOCK.open ? `<div class="dock-p"><div class="dock-h"><b>Talk to FundPath</b><button class="x" data-a="dockToggle">×</button></div>
       <div class="dock-log" id="dockLog">${DOCK.log.length ? DOCK.log.map(x => `<div class="dl ${x.who}"><span>${esc(x.text)}</span></div>`).join("") : `<div class="muted small pad">Try: “How much can we still spend?” · “What's our food limit?” · “Start a meeting” · “Check my budget file” · “Submit our proposal” · “Where's our spend authorization?”${S.role === "asg" ? " · “Approve the Banking Club authorization”" : ""}</div>`}</div>
-      <form class="dock-in" data-a2="dockSend"><button type="button" class="mic ${DOCK.listening ? "on" : ""}" data-a="dockMic" title="Hold a conversation">${DOCK.listening ? "■" : "🎙"}</button><input id="dockIn" placeholder="Ask or tell FundPath…"><button class="btn sm">Send</button></form></div>` : ""}
-    <button class="dock-b" data-a="dockToggle">${DOCK.open ? "Close" : "🎙 Talk to FundPath"}</button></div>`;
+      <form class="dock-in" data-a2="dockSend"><button type="button" class="mic ${DOCK.listening ? "on" : ""}" data-a="dockMic" title="Hold a conversation">${DOCK.listening ? "Stop" : "Speak"}</button><input id="dockIn" placeholder="Ask or tell FundPath…"><button class="btn sm">Send</button></form></div>` : ""}
+    <button class="dock-b" data-a="dockToggle">${DOCK.open ? "Close" : "Talk to FundPath"}</button></div>`;
 }
 function dockSay(text, who = "ai") { DOCK.log.push({ who, text }); const el = $("#dockLog"); if (el) { el.innerHTML = DOCK.log.map(x => `<div class="dl ${x.who}"><span>${esc(x.text)}</span></div>`).join(""); el.scrollTop = el.scrollHeight; } if (who === "ai") speak(text); }
 const VIEW_WORDS = [["meeting", /meeting|record/], ["upload", /upload|excel|spreadsheet|file|check (my|our) budget/], ["proposal", /proposal|budget/], ["spend", /spend auth|authorization|\bsa\b/], ["card", /card|receipt/], ["deposits", /deposit|cash sale/], ["workday", /workday/], ["help", /help|liaison|question/], ["rules", /rules?|limits?|settings/], ["home", /dashboard|home/], ["sareview", /spend review|review queue/], ["review", /proposal review/]];
@@ -423,3 +423,36 @@ A.toggleST = (d, el) => { S.settings.straightThrough = el.checked; save(); toast
 
 // top-bar search: send to the assistant
 document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.dataset && e.target.dataset.a2 === "search") { const v = e.target.value.trim(); if (!v) return; DOCK.open = true; render(); handleCommand(v); } });
+
+// ---------------------------------------------------------------------------
+// Presenter guide (demo data only): the five demo beats, with progress
+// ---------------------------------------------------------------------------
+function demoBeats() {
+  const m = M(); const o = S.orgs.find(x => x.id === "o1");
+  const sa = o && S.spend.filter(s => s.orgId === o.id && s.kind === "SA").slice(-1)[0];
+  const done = [m.transcript.length > 0, !!m.built && (m.qs || []).length > 0 && m.qi >= (m.qs || []).length, ["running", "done"].includes(m.stage), !!sa && ["approved", "active", "closed"].includes(sa.status), !!sa && ["active", "closed"].includes(sa.status)];
+  const names = ["Run the exec meeting", "Answer FundPath's questions", "Say yes to submit", "Approved automatically", "Pick up the card"];
+  const cur = done.indexOf(false);
+  return names.map((n, i) => ({ n, done: done[i], on: i === cur }));
+}
+const _render = render;
+render = function () {
+  _render();
+  if (S.mode !== "demo" || UI.hidePresenter) return;
+  const tb = document.querySelector(".topbar"); if (!tb) return;
+  const el = document.createElement("div"); el.className = "presenter";
+  el.innerHTML = `<b>Demo</b><ol>${demoBeats().map((x, i) => `<li class="${x.done ? "done" : x.on ? "on" : ""}">${i + 1}. ${esc(x.n)}</li>`).join("")}</ol><button data-a="demoRestart">Restart demo</button><button data-a="demoHide" style="margin-left:0">Hide</button>`;
+  tb.after(el);
+};
+Object.assign(A, {
+  demoRestart: () => { S = seedState(); S.mode = "demo"; UI = { view: "meeting", modal: null, threadId: null, busy: false, saId: null }; VOICE.playing = false; DOCK.log = []; save(); location.hash = "meeting"; render(); window.scrollTo(0, 0); toast("Demo reset. Start the meeting when you're ready."); },
+  demoHide: () => { UI.hidePresenter = true; render(); }
+});
+
+// Upload: don't silently replace an approved proposal
+const _vu = VIEWS.upload;
+VIEWS.upload = () => { const o = ORG(); const ap = S.proposals.find(p => p.orgId === o.id && p.semester === S.settings.semester && p.status === "approved"); let h = _vu(); if (UI.upload && ap) h = h.replace(/<button class="btn ghost" data-a="upUse" data-v="raw">Use as uploaded<\/button> <button class="btn" data-a="upUse" data-v="fixed">Use the fixed budget →<\/button>/, `<span class="small muted">${ap.id} is already approved for ${esc(S.settings.semester)}. Changes go through an ASG amendment.</span>`); return h; };
+
+// Dashboard: lead with the exec meeting when there's no proposal yet
+const _vh = VIEWS.home;
+VIEWS.home = () => _vh().replace(/<button class="btn" data-a="newProposal">Start ([^<]*) proposal<\/button>/, '<button class="btn ghost" data-a="go" data-id="upload">Upload a budget</button><button class="btn ghost" data-a="newProposal">Start $1 proposal by hand</button><button class="btn" data-a="go" data-id="meeting">Start with an exec meeting</button>');
