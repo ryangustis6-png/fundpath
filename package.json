@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "test": "node workflow.test.cjs && node integrations.test.cjs && node free-quotes.test.cjs && node strict-intake.test.cjs",
-    "test:browser": "node meeting-bridge.test.cjs && node club-workspaces.test.cjs && node ap-workflow.test.cjs",
+    "test:browser": "node meeting-bridge.test.cjs && node club-workspaces.test.cjs && node ap-workflow.test.cjs && node demo-reset.test.cjs",
     "build:demo": "node build-demo.cjs"
   },
   "devDependencies": {

@@ -40,8 +40,11 @@ const fs=require('node:fs'),http=require('node:http'),path=require('node:path'),
   assert.equal(await page.evaluate(()=>cur().receipts.length),0);
   await page.getByLabel('Organization',{exact:true}).selectOption('personalFinance');await page.waitForFunction(()=>cur().presetClubKey==='personalFinance');
   assert.equal(await page.evaluate(()=>cur().status),'approved');assert.equal(await page.evaluate(()=>cur().receipts.length),0);
-  await page.getByRole('button',{name:'Restart demo',exact:true}).click();await page.waitForFunction(()=>cur().status==='draft');
+  await page.getByRole('button',{name:'Restart demo',exact:true}).click();await page.waitForFunction(()=>cur()?.status==='draft'&&!restartingDemo);
   assert.equal(await page.evaluate(()=>cur().presetClubKey),'personalFinance');assert.equal(await page.evaluate(()=>cur().lines.length),8);
+  assert.equal(await page.evaluate(()=>Object.keys(Store.apps).length),3);
+  assert.equal(await page.evaluate(()=>Object.values(Store.apps).every(a=>a.status==='draft'&&!a.asg&&!a.sa&&a.card.status==='none'&&a.receipts.length===0)),true);
+  assert.equal(await page.evaluate(()=>apRequests().length),0);
   await page.reload();assert.equal(await page.evaluate(()=>cur().presetClubKey),'personalFinance');
   assert.equal(await page.getByRole('button',{name:'Start meeting with ElevenLabs',exact:true}).count(),1);
   for(const width of [390,768,1440]){await page.setViewportSize({width,height:1000});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'Overflow '+width);}
@@ -60,8 +63,9 @@ const fs=require('node:fs'),http=require('node:http'),path=require('node:path'),
   assert.equal(await standalone.locator('#organization-switcher').count(),1);
   assert.equal(await standalone.getByRole('button',{name:'Restart demo',exact:true}).count(),1);
   await standalone.getByLabel('Organization',{exact:true}).selectOption('pickleball');await standalone.waitForFunction(()=>cur().presetClubKey==='pickleball');
-  const runsBefore=await standalone.evaluate(()=>Object.keys(Store.apps).length);
-  await standalone.getByRole('button',{name:'Restart demo',exact:true}).click();await standalone.waitForFunction(count=>Object.keys(Store.apps).length===count+1,runsBefore);
+  const runBefore=await standalone.evaluate(()=>cur().id);
+  await standalone.getByRole('button',{name:'Restart demo',exact:true}).click();await standalone.waitForFunction(id=>cur()&&cur().id!==id&&!restartingDemo,runBefore);
+  assert.equal(await standalone.evaluate(()=>Object.keys(Store.apps).length),3);
   assert.equal(await standalone.evaluate(()=>cur().presetClubKey),'pickleball');
   assert.deepEqual(errors,[]);console.log('PASS: three-club switcher; meeting-first entry; exact imported PFC proposal + approval/SA; six Pickleball-only receipt assets applied once after approval; exact balance; uploads retained; isolation; per-club restart and reload; responsive widths.');
  }finally{if(browser)await browser.close();server.close();}

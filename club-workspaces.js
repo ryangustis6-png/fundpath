@@ -25,7 +25,7 @@ if(previousBanking){previousBanking.presetClubKey='banking';save(previousBanking
 for(const key of Object.keys(CLUB_PROFILES))if(!clubRun(key))createClubRun(key);
 async function selectClub(key){
   if(!CLUB_PROFILES[key])return;
-  await stopMeeting();
+  if(meetingSession||meetingConnecting)await stopMeeting();
   const a=clubRun(key)||createClubRun(key);
   UI.role='org';UI.appId=a.id;UI.stage=1;UI.fill=null;UI.rec={state:'idle'};UI.manual=false;UI.showAgent=a.status==='draft';UI.showFix=false;meetingError='';
   lsSet('fp.activeClubPreset',key);lsSet('fp.role','org');lsSet('fp.app',a.id);lsSet('fp.stage',1);render();window.scrollTo({top:0});
@@ -46,12 +46,37 @@ render=function(){
   renderBeforeClubSwitcher();
   const select=document.querySelector('#organization-switcher');if(select)select.value=cur()?.presetClubKey||'banking';
 };
+const retiredDemoApps=new Set();
+const saveBeforeDemoReset=save;
+save=function(a,immediate){if(a&&!retiredDemoApps.has(a.id))return saveBeforeDemoReset(a,immediate);};
+let demoResetEpoch=0;
+const putBeforeDemoReset=FILES.put.bind(FILES);
+FILES.put=async function(id,file){
+  const epoch=demoResetEpoch,stored=await putBeforeDemoReset(id,file);
+  if(epoch!==demoResetEpoch){
+    try{const db=await FILES.open();await new Promise((resolve,reject)=>{const tx=db.transaction('files','readwrite');tx.objectStore('files').delete(id);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});}catch{}
+    return false;
+  }
+  return stored;
+};
 restartBankingDemo=async function(){
   if(restartingDemo)return;restartingDemo=true;
   try{
     const key=cur()?.presetClubKey||lsGet('fp.activeClubPreset','banking');await stopMeeting();
-    const old=clubRun(key);if(old){old.archivedDemo=true;old.defaultMeetingProfile=false;save(old,true);}
-    createClubRun(key);await selectClub(key);
+    ++demoResetEpoch;
+    const oldIds=Object.keys(Store.apps);
+    for(const id of oldIds){retiredDemoApps.add(id);clearTimeout(pending[id]);delete pending[id];}
+    // The original shared demo reader ignores records without an app field.
+    if(Store.mode==='shared'&&Store.db){
+      try{await Promise.all(oldIds.map(id=>Store.db.collection('apps').doc(id).set({deleted:true,at:now()})));}
+      catch{Store.mode='local';Store.db=null;}
+    }
+    Store.apps={};lsSet('fp.apps',{});
+    try{const db=await FILES.open();await new Promise((resolve,reject)=>{const tx=db.transaction('files','readwrite');tx.objectStore('files').clear();tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});}catch{}
+    applyingPreloadedReceipts.clear();
+    UI.apSel=null;UI.asgSel=null;UI.auSel=null;UI.draft=null;UI.audDraft=null;UI.chat={open:false,msgs:[],busy:false};
+    for(const preset of Object.keys(CLUB_PROFILES))createClubRun(preset);
+    await selectClub(CLUB_PROFILES[key]?key:'banking');
   }finally{restartingDemo=false;}
 };
 const meetingCardBeforeClubPresets=meetingCard;
@@ -81,6 +106,7 @@ async function applyPreloadedReceipt(key){
   try{
     const bytes=Uint8Array.from(atob(source.base64),c=>c.charCodeAt(0));
     const file=new File([bytes],source.fileName,{type:source.mime});const id=uid(),stored=await FILES.put(id,file);
+    if(retiredDemoApps.has(a.id))return;
     a.receipts.push({id,receiptSourceKey:key,fileName:source.fileName,hasFile:stored,date:source.date,vendor:source.vendor,desc:source.desc,amount:source.amount,tip:source.tip,category:source.category,tripType:'',people:'',nights:'',kept:false,asg:null});
     log(a,'Treasurer',`Applied supplied receipt: ${source.vendor} ${money(source.amount)}`);save(a,true);
   }finally{applyingPreloadedReceipts.delete(lock);render();}

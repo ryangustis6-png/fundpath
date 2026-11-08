@@ -67,7 +67,9 @@ async function autofillReceiptPhoto(a,r,file){
 addReceiptFiles=async function(files){
   const a=cur();if(!a)return;
   for(const file of files){
+    if(typeof retiredDemoApps!=='undefined'&&retiredDemoApps.has(a.id))return;
     const p=parseReceiptName(file.name),id=uid(),stored=await FILES.put(id,file);
+    if(typeof retiredDemoApps!=='undefined'&&retiredDemoApps.has(a.id))return;
     const r={id,fileName:file.name,hasFile:stored,date:p?.date||'',vendor:p?.vendor||'',desc:p?.desc||'',amount:p?.amount||'',tip:p?.tip||0,category:p?.category||'',tripType:'',people:'',nights:'',kept:false,asg:null};
     a.receipts.push(r);save(a);render();await autofillReceiptPhoto(a,r,file);
   }

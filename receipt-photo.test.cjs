@@ -9,8 +9,8 @@ const fs=require('node:fs'),http=require('node:http'),path=require('node:path'),
   assert.equal(await page.evaluate(()=>getComputedStyle(document.body).backgroundColor),'rgb(255, 255, 255)');
   await page.evaluate(()=>document.documentElement.dataset.theme='dark');
   assert.equal(await page.evaluate(()=>getComputedStyle(document.body).backgroundColor),'rgb(255, 255, 255)');
-  await page.waitForFunction(id=>cur().id!==id,previous);
-  assert.equal(await page.evaluate(id=>!!Store.apps[id],previous),true);
+  await page.waitForFunction(id=>cur()&&cur().id!==id&&!restartingDemo,previous);
+  assert.equal(await page.evaluate(id=>!!Store.apps[id],previous),false);
   assert.equal(await page.evaluate(()=>cur().org.sa),'SA10472');
   assert.equal(await page.getByRole('button',{name:'Start meeting with ElevenLabs',exact:true}).count(),1);
   const result=await Promise.race([page.evaluate(async()=>{
