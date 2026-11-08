@@ -30,7 +30,16 @@ async function selectClub(key){
   UI.role='org';UI.appId=a.id;UI.stage=1;UI.fill=null;UI.rec={state:'idle'};UI.manual=false;UI.showAgent=a.status==='draft';UI.showFix=false;meetingError='';
   lsSet('fp.activeClubPreset',key);lsSet('fp.role','org');lsSet('fp.app',a.id);lsSet('fp.stage',1);render();window.scrollTo({top:0});
 }
-document.querySelector('.top-in')?.insertAdjacentHTML?.('afterbegin',`<label class="club-switcher">Organization<select id="organization-switcher" aria-label="Organization">${Object.entries(CLUB_PROFILES).map(([key,p])=>`<option value="${key}">${esc(p.name)}</option>`).join('')}</select></label>`);
+function mountClubControls(){
+  const header=document.querySelector('.top-in');if(!header?.insertAdjacentHTML)return;
+  // Shared/saved HTML can already contain rendered controls. Replace those copies
+  // before mounting one canonical pair; never append a second set.
+  document.querySelectorAll('.club-switcher,#organization-switcher,#restart-demo').forEach(el=>el.remove());
+  header.insertAdjacentHTML('afterbegin',`<label class="club-switcher">Organization<select id="organization-switcher" aria-label="Organization">${Object.entries(CLUB_PROFILES).map(([key,p])=>`<option value="${key}">${esc(p.name)}</option>`).join('')}</select></label>`);
+  header.insertAdjacentHTML('beforeend','<button class="btn sm" id="restart-demo">Restart demo</button>');
+  document.querySelector('#organization-switcher').value=cur()?.presetClubKey||'banking';
+}
+mountClubControls();
 document.addEventListener('change',e=>{if(e.target.id==='organization-switcher')selectClub(e.target.value);});
 const renderBeforeClubSwitcher=render;
 render=function(){

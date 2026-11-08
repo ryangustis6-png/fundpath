@@ -231,7 +231,6 @@ async function restartBankingDemo(){
     save(a,true);lsSet('fp.role','org');lsSet('fp.app',a.id);lsSet('fp.stage',1);render();window.scrollTo({top:0});
   }finally{restartingDemo=false;}
 }
-document.querySelector('.top-in')?.insertAdjacentHTML?.('beforeend','<button class="btn sm" id="restart-demo">Restart demo</button>');
 document.addEventListener('click',e=>{if(e.target.closest('#restart-demo'))restartBankingDemo();});
 // Open directly in Michael's Banking Club workspace without an officer setup form.
 let bankingWorkspace=Object.values(Store.apps).find(a=>a.defaultMeetingProfile);

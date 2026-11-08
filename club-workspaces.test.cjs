@@ -51,6 +51,18 @@ const fs=require('node:fs'),http=require('node:http'),path=require('node:path'),
   await standalone.getByLabel('Organization',{exact:true}).selectOption('personalFinance');await standalone.waitForFunction(()=>cur().presetClubKey==='personalFinance');
   assert.equal(await standalone.evaluate(()=>totals(cur()).total),2645.95);
   assert.equal(await standalone.getByRole('button',{name:'Start meeting with ElevenLabs',exact:true}).count(),1);
+  // Saved/shared HTML may include controls that were already rendered before loading.
+  await standalone.evaluate(()=>{
+    const header=document.querySelector('.top-in');
+    for(let i=0;i<2;i++){header.appendChild(document.querySelector('.club-switcher').cloneNode(true));header.appendChild(document.querySelector('#restart-demo').cloneNode(true));}
+    mountClubControls();mountClubControls();
+  });
+  assert.equal(await standalone.locator('#organization-switcher').count(),1);
+  assert.equal(await standalone.getByRole('button',{name:'Restart demo',exact:true}).count(),1);
+  await standalone.getByLabel('Organization',{exact:true}).selectOption('pickleball');await standalone.waitForFunction(()=>cur().presetClubKey==='pickleball');
+  const runsBefore=await standalone.evaluate(()=>Object.keys(Store.apps).length);
+  await standalone.getByRole('button',{name:'Restart demo',exact:true}).click();await standalone.waitForFunction(count=>Object.keys(Store.apps).length===count+1,runsBefore);
+  assert.equal(await standalone.evaluate(()=>cur().presetClubKey),'pickleball');
   assert.deepEqual(errors,[]);console.log('PASS: three-club switcher; meeting-first entry; exact imported PFC proposal + approval/SA; six Pickleball-only receipt assets applied once after approval; exact balance; uploads retained; isolation; per-club restart and reload; responsive widths.');
  }finally{if(browser)await browser.close();server.close();}
 })().then(()=>process.exit(0)).catch(e=>{console.error(e);process.exit(1)});
