@@ -5,11 +5,13 @@ const spokenExpenseCategories=[
   [/\bcapital(?:\s+(?:items?|purchases?|equipment))?\b/i,'Capital Item'],
   [/\bflights?\b/i,'Trip: Flights'],[/\bgas\b/i,'Trip: Gas'],
   [/\bhotels?\b/i,'Trip: Hotels'],[/\bspeaker\s+fees?\b/i,'Event: Guest Speaker'],
+  [/\b(?:space|venue|facility|room)\s+(?:fees?|rentals?|costs?)\b/i,'Event: Space Fee'],
   [/\bfood\b/i,'Event: Food'],[/\bmarketing\b/i,'Marketing'],
   [/\badministrative\b/i,'Admin Item']
 ];
 function spokenExpenseCategory(text){return spokenExpenseCategories.find(([pattern])=>pattern.test(text))?.[1]||null;}
 const isTravelExpense=l=>['Trip: Gas','Trip: Flights','Trip: Hotels'].includes(l.category);
+const requiresExpenseEvent=l=>isTravelExpense(l)||l.category==='Event: Space Fee';
 for(const category of ['Event: Food','Event: Guest Speaker'])if(!NONEVENT_CATS.includes(category))NONEVENT_CATS.push(category);
 function isMeetingEnd(text){
   return /^(?:(?:awesome|okay|ok|great|thanks|thank you|fundpath|please|let's|lets|we can|can you|could you)[\s,.!—-]+)*(?:end|stop|finish|wrap up)\s+(?:(?:the|our|this)\s+)?meeting(?:\s+(?:now|please))?[\s,.!?]*$/i.test(String(text).trim());
@@ -50,18 +52,18 @@ function consolidateMeetingExpenses(lines,events=[]){
 }
 parseTranscript=function(text){
   const result={tier:null,prior:null,events:[],lines:[],questions:[]};let event=null;
-  const sentences=String(text).split(/\n+|(?<=[.!?])\s+/).flatMap(s=>s.split(/\s+(?:and|then)\s+(?=(?:capital|flights?|gas|hotels?|speaker\s+fees?|food|marketing|administrative)\b)/i));
+  const sentences=String(text).split(/\n+|(?<=[.!?])\s+/).flatMap(s=>s.split(/\s+(?:and|then)\s+(?=(?:capital|flights?|gas|hotels?|speaker\s+fees?|space\s+fees?|venue\s+(?:fees?|rentals?)|food|marketing|administrative)\b)/i));
   for(let sentence of sentences){
     sentence=sentence.replace(/^[A-Z][\w .'-]*\([^)]*\):\s*/, '').trim();
     if(!sentence||isMeetingEnd(sentence))continue;
     if(/^(?:event|trip)\b[^:]*:/i.test(sentence)){
-      const context=jeffParseTranscript(sentence);if(context.events.length){event=context.events[0];result.events.push(event);}
+      const context=jeffParseTranscript(sentence.replace(/^(event|trip)\s*:/i,'$1 one:'));if(context.events.length){event=context.events[0];result.events.push(event);}
     }
     const category=spokenExpenseCategory(sentence);if(!category)continue;
     const amounts=[...sentence.matchAll(/\$\s*([\d,]+(?:\.\d{1,2})?)|\b(\d+(?:\.\d{1,2})?)\s+dollars\b/gi)].map(m=>Number((m[1]||m[2]).replace(/,/g,'')));
     if(!amounts.length)continue;
     if(amounts.length>1){result.questions.push('Confirm the itemized amount for: '+sentence);}
-    const standalone=!isTravelExpense({category});
+    const standalone=!requiresExpenseEvent({category});
     const label=sentence.replace(/\$\s*[\d,.]+|\b\d+(?:\.\d{1,2})?\s+dollars\b/gi,'').replace(/\s+/g,' ').trim();
     result.lines.push(mkLine(standalone?'nonevent':'event',standalone?null:event?.id||null,label,category,amounts.at(-1),'',sentence));
   }
@@ -95,7 +97,7 @@ async function startMeeting(){
       onError:()=>{if(epoch===meetingEpoch){meetingError='Could not connect. Check microphone permission and the allowed website domains for your ElevenLabs agent.';render();}}
     });
     if(epoch!==meetingEpoch||cur()!==a){await session.endSession();return;}
-    if(!disconnected){meetingSession=session;session.sendContextualUpdate?.(`You are helping ${a.club} plan an ASG budget. Listen to the team and offer concise suggestions. Do not claim to submit or approve anything. Budget limits: tier ${a.tier}, remaining ${totals(a).cap}; food ${totals(a).foodCap}; hotel $50/person/night; flights $300/person; admin/storage $1000 each; speakers $3000. Alcohol, tobacco and gambling are prohibited. Capital purchases need no quote or Miami Central listing. Food, speaker fees, marketing and administrative expenses also stand alone and need no event or campus listing. Only gas, flights and hotels require an event/trip relationship. Ask for travel dates, attendance and Miami Central listing for those travel plans; quotes remain required for hotels and flights. Flag uncertain eligibility. The app validates the draft after the meeting.`);}
+    if(!disconnected){meetingSession=session;session.sendContextualUpdate?.(`You are helping ${a.club} plan an ASG budget. Listen to the team and offer concise suggestions. Do not claim to submit or approve anything. Budget limits: tier ${a.tier}, remaining ${totals(a).cap}; food ${totals(a).foodCap}; hotel $50/person/night; flights $300/person; admin/storage $1000 each; speakers $3000. Alcohol, tobacco and gambling are prohibited. Capital purchases need no quote or Miami Central listing. Food, speaker fees, marketing and administrative expenses also stand alone and need no event or campus listing. Gas, flights and hotels require a travel event/trip relationship. Space fees and venue rentals are also supported expenses and must be linked to their actual event. Ask for travel dates, attendance and Miami Central listing for those travel plans; quotes remain required for hotels and flights. Flag uncertain eligibility. The app validates the draft after the meeting.`);}
   }catch{if(epoch===meetingEpoch)meetingError='Could not start your meeting. Check microphone permission, your connection and the agent’s allowed website domains. Your notes are saved.';}
   finally{if(epoch===meetingEpoch){meetingConnecting=false;render();}}
 }
@@ -110,7 +112,7 @@ function prepareCompliantDraft(a){
     const category=l.sourceSheetRow?l.category:spokenExpenseCategory(l.item)||spokenExpenseCategory(l.note||'');
     if(isMeetingEnd(l.item)||!category)return false;
     l.category=category;
-    if(!isTravelExpense(l)){l.group='nonevent';l.eventId=null;}
+    if(!requiresExpenseEvent(l)){l.group='nonevent';l.eventId=null;}
     const text=`${l.item} ${l.vendor} ${l.note}`;
     if(PROHIBITED.test(text)||CLOTHING.test(text)){a.excludedLines.push({...l,reason:PROHIBITED.test(text)?'Prohibited purchase':'Requires a trademark / funding review'});return false;}
     return true;
@@ -142,11 +144,11 @@ fillFromTranscript=async function(text){
 };
 const jeffValidate=validate;
 validate=function(a){
-  const travelLines=a.lines.filter(isTravelExpense);
-  const normalized={...a,lines:a.lines.map(l=>isTravelExpense(l)?{...l,group:'event'}:{...l,group:'nonevent',eventId:null}),events:a.events.filter(e=>travelLines.some(l=>l.eventId===e.id))};
+  const eventLines=a.lines.filter(requiresExpenseEvent);
+  const normalized={...a,lines:a.lines.map(l=>requiresExpenseEvent(l)?{...l,group:'event'}:{...l,group:'nonevent',eventId:null}),events:a.events.filter(e=>eventLines.some(l=>l.eventId===e.id))};
   const v=jeffValidate(normalized);
   // Standalone purchases need neither a fictional event nor a campus listing.
-  const standaloneOnly=a.lines.length>0&&!travelLines.length;
+  const standaloneOnly=a.lines.length>0&&!eventLines.length;
   if(standaloneOnly){
     v.all=v.all.filter(x=>x.msg!=='Add at least one event or trip.');
     v.errors=v.all.filter(x=>x.sev==='error');v.reviews=v.all.filter(x=>x.sev==='review');
@@ -161,7 +163,7 @@ validate=function(a){
     v.errors=v.all.filter(x=>x.sev==='error');v.reviews=v.all.filter(x=>x.sev==='review');
   }
   const add=(msg)=>{const x={sev:'error',msg,src:S.tpl};v.all.push(x);v.errors.push(x);};
-  for(const line of travelLines)if(!a.events.some(e=>e.id===line.eventId))add(`${line.item}: link this travel expense to an event or trip.`);
+  for(const line of eventLines)if(!a.events.some(e=>e.id===line.eventId))add(`${line.item}: link this ${isTravelExpense(line)?'travel expense':'space fee'} to an event or trip.`);
   if(!a.lines.length)add('Add at least one eligible expense before submitting.');
   if(!(TIERS[a.tier]>0))add('Choose a valid funding tier.');
   if(!Number.isFinite(+a.org.prior)||+a.org.prior<0)add('Prior funding must be a valid nonnegative amount.');

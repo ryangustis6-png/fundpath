@@ -9,7 +9,7 @@ vm.runInContext(fs.readFileSync('meeting-bridge.js','utf8'),ctx);
 const parse=t=>JSON.parse(vm.runInContext(`JSON.stringify(parseTranscript(${JSON.stringify(t)}))`,ctx));
 const result=parse("Today's meeting is for the spring semester budget. Capital items: projector $350. Awesome end meeting.");
 assert.equal(result.lines.length,1);assert.equal(result.lines[0].category,'Capital Item');assert.deepEqual(result.events,[]);
-for(const text of ['Awesome end meeting $500','Today\'s meeting is for the spring semester budget.','We have $5000 total.','Equipment $100.','Venue rental $200.','Registration $100.','Storage $50.','Miscellaneous $100.'])assert.equal(parse(text).lines.length,0,text);
+for(const text of ['Awesome end meeting $500','Today\'s meeting is for the spring semester budget.','We have $5000 total.','Equipment $100.','Registration $100.','Storage $50.','Miscellaneous $100.'])assert.equal(parse(text).lines.length,0,text);
 for(const [word,cat] of [['capital items','Capital Item'],['flights','Trip: Flights'],['gas','Trip: Gas'],['hotels','Trip: Hotels'],['speaker fees','Event: Guest Speaker'],['food','Event: Food'],['marketing','Marketing'],['administrative','Admin Item']])assert.equal(parse(`${word} $100.`).lines[0].category,cat);
 assert.equal(parse('Capital items $350 and marketing $100.').lines.length,2);
 vm.runInContext(`cur().events=[{id:'phantom',type:'Event',name:"Today's meeting is for the spring semester budget.",date:''}];cur().lines=[mkLine('event','phantom','Capital items projector','Capital Item',350),mkLine('event','phantom','Awesome end meeting','Event: Other',100)];prepareCompliantDraft(cur());`,ctx);
@@ -45,3 +45,9 @@ assert.equal(vm.runInContext("cur().lines.every(l=>l.group==='nonevent'&&!l.even
 vm.runInContext("cur().lines.push(mkLine('event',null,'Gas','Trip: Gas',50));",ctx);
 assert.equal(vm.runInContext("validate(cur()).errors.some(x=>/link this travel expense/.test(x.msg))",ctx),true);
 console.log('PASS: food and speaker fees stand alone; travel still requires its event relationship.');
+const venue=parse('Event: Oxford Lanes on October 21. Space fees $200.');
+assert.equal(venue.lines[0].category,'Event: Space Fee');assert.equal(venue.lines[0].eventId,venue.events[0].id);
+assert.equal(parse('Venue rental $200.').lines[0].category,'Event: Space Fee');
+vm.runInContext("cur().events=[];cur().lines=parseTranscript('Space fee $200.').lines;",ctx);
+assert.equal(vm.runInContext("validate(cur()).errors.some(x=>/link this space fee/.test(x.msg))",ctx),true);
+console.log('PASS: explicit space/venue fees recognized and require a real event relationship.');

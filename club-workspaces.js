@@ -4,10 +4,20 @@ const CLUB_PROFILES={
   personalFinance:{name:'Personal Finance Club',tier:4,org:{...CLUB_PRELOADS.proposal.org,president:'Jeff Koch',treasurer:'Ninos Aneer',sa:'SA10384',prior:0}},
   pickleball:{name:'Pickleball Club',tier:4,org:{sa:'SA10314',treasurer:'Cole Fisher',president:'Cole Fisher',prior:0}}
 };
+function linkImportedProposalEvents(a){
+  const p=CLUB_PRELOADS.proposal;
+  for(const line of a.lines.filter(l=>l.sourceSheetRow&&requiresExpenseEvent(l))){
+    const source=p.events.find(e=>e.name===line.sourceEvent);if(!source)continue;
+    let event=a.events.find(e=>e.name===source.name);
+    if(!event){event={id:uid(),name:source.name,date:source.date,type:source.type,onHub:true,people:0,nights:0,flightPeople:0};a.events.push(event);}
+    line.group='event';line.eventId=event.id;
+  }
+}
 function seedPersonalFinanceProposal(a){
   const p=CLUB_PRELOADS.proposal;
   a.semester=p.semester;a.events=[];
   a.lines=p.lines.map(row=>({...mkLine('nonevent',null,row.item,row.category,row.amount,'','Imported from your supplied funding proposal.'),sourceSheetRow:row.row,sourceEvent:row.sourceEvent||'',sourceComment:row.sourceComment}));
+  linkImportedProposalEvents(a);
   a.source=p.fileName;a.importedProposal=true;a.proposalSourceTotal=p.total;
   // Importing a structured proposal must preserve every source row, including venue fees.
   for(const l of a.lines)if(!NONEVENT_CATS.includes(l.category))NONEVENT_CATS.push(l.category);
@@ -23,6 +33,8 @@ function clubRun(key){return Object.values(Store.apps).find(a=>a.presetClubKey==
 const previousBanking=Object.values(Store.apps).find(a=>a.defaultMeetingProfile&&!a.presetClubKey);
 if(previousBanking){previousBanking.presetClubKey='banking';save(previousBanking,true);}
 for(const key of Object.keys(CLUB_PROFILES))if(!clubRun(key))createClubRun(key);
+const savedFinance=clubRun('personalFinance');
+if(savedFinance?.lines.some(l=>l.sourceSheetRow)){linkImportedProposalEvents(savedFinance);save(savedFinance,true);}
 async function selectClub(key){
   if(!CLUB_PROFILES[key])return;
   if(meetingSession||meetingConnecting)await stopMeeting();
