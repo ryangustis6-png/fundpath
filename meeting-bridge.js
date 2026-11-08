@@ -1,15 +1,29 @@
 /* Michael's live meeting intake; Jeff's downstream workflow stays in index.html. */
 let meetingSession=null,meetingConnecting=false,meetingEpoch=0,meetingError='';
 const meetingAgentId=DEFAULT_MEETING_AGENT_ID;
+const expenseWords=/\b(capital|equipment|projectors?|computers?|laptops?|tablets?|monitors?|printers?|cameras?|microphones?|speakers?|honorari\w*|fees?|hotels?|lodging|flights?|airfare|plane|gas|fuel|gallons?|transport\w*|vehicles?|rentals?|catering|food|pizza|meals?|dinner|lunch|breakfast|snacks?|supplies|materials|furniture|chairs?|tables?|tent|banners?|storage|subscriptions?|software|licenses?|marketing|advertis\w*|flyers?|posters?|printing|venue|facility|lanes?|dues|registration|entertainer|band|dj)\b/i;
+function isMeetingEnd(text){
+  return /^(?:(?:awesome|okay|ok|great|thanks|thank you|fundpath|please|let's|lets|we can|can you|could you)[\s,.!—-]+)*(?:end|stop|finish|wrap up)\s+(?:(?:the|our|this)\s+)?meeting(?:\s+(?:now|please))?[\s,.!?]*$/i.test(String(text).trim());
+}
+function hasExpense(text){return !isMeetingEnd(text)&&expenseWords.test(text);}
+let meetingFinishing=false;
+async function finishMeetingAndBuild(){
+  const a=cur();if(!a||a.status!=='draft'||meetingFinishing)return;
+  meetingFinishing=true;
+  try{await stopMeeting();if(cur()===a){const text=studentNotes(a);if(text.trim())await fillFromTranscript(text);else toast('No expenses were captured. Add meeting notes to build your budget.');}}
+  finally{meetingFinishing=false;}
+}
 // Keep the spoken description available to the purchase-restriction checker.
 const jeffFromSentence=fromSentence;
 fromSentence=function(s,amounts,event){
+  if(!hasExpense(s))return [];
   const result=jeffFromSentence(s,amounts,event);
   for(const l of [].concat(result))l.note=[l.note,s].filter(Boolean).join(' · ');
   return result;
 };
 const jeffParseTranscript=parseTranscript;
 parseTranscript=function(text){
+  text=text.split(/\n+|(?<=[.!?])\s+/).filter(s=>!isMeetingEnd(s.replace(/^[A-Z][\w .'-]*(?:\([^)]*\))?:\s*/,''))).join('\n');
   const parsed=jeffParseTranscript(text);if(parsed.lines.length)return parsed;
   // Unstructured speech does not need Jeff's “Event one:” / “Non-event:” markers.
   const sentences=text.split(/\n+|(?<=[.!?])\s+/).map(s=>s.trim()).filter(Boolean);
@@ -20,21 +34,21 @@ parseTranscript=function(text){
       event={id:uid(),type:/\b(trip|travel|conference)\b/i.test(sentence)?'Trip':'Event',name:sentence.replace(/\$[\d,.]+/g,'').slice(0,100),date:date?date[0]:'',people:0,nights:0,flightPeople:0,onHub:false};parsed.events.push(event);
     }
     const amounts=[...sentence.matchAll(/\$\s*([\d,]+(?:\.\d{1,2})?)|\b(\d+(?:\.\d{1,2})?)\s+dollars\b/gi)].map(m=>Number((m[1]||m[2]).replace(/,/g,'')));
-    if(!amounts.length)continue;
+    if(!amounts.length||!hasExpense(sentence))continue;
     if(amounts.length>1){parsed.questions=parsed.questions||[];parsed.questions.push('Confirm the itemization of: '+sentence);}
     if(event){const l=fromSentence(sentence,amounts,event);parsed.lines.push(...[].concat(l));}
     else{
-      const cat=/banner/i.test(sentence)?'Banners':/marketing|poster|flyer/i.test(sentence)?'Marketing':/storage/i.test(sentence)?'Storage':/equipment|capital/i.test(sentence)?'Capital Item':'Admin Item';
-      parsed.lines.push(mkLine('nonevent',null,sentence.replace(/\$[\d,.]+/g,'').trim(),cat,amounts.at(-1),'',sentence));
+      const cat=/banner/i.test(sentence)?'Banners':/marketing|poster|flyer/i.test(sentence)?'Marketing':/storage/i.test(sentence)?'Storage':/equipment|capital|projector|computer|laptop|tablet|monitor|printer|camera|microphone|furniture|chair|table|tent/i.test(sentence)?'Capital Item':/\b(gas|fuel|gallon)/i.test(sentence)?'Trip: Gas':/hotel|lodging/i.test(sentence)?'Trip: Hotels':/flight|airfare|plane/i.test(sentence)?'Trip: Flights':/speaker|honorari/i.test(sentence)?'Event: Guest Speaker':/catering|food|meal|pizza|snack/i.test(sentence)?'Event: Food':'Admin Item';
+      parsed.lines.push(mkLine(/^(Trip|Event):/.test(cat)?'event':'nonevent',null,sentence.replace(/\$[\d,.]+/g,'').trim(),cat,amounts.at(-1),'',sentence));
     }
   }
   return parsed;
 };
 function meetingMessages(a){return a.meetingMessages||(a.meetingMessages=[]);}
-function studentNotes(a){return meetingMessages(a).filter(m=>m.role==='user').map(m=>m.text).join('\n');}
+function studentNotes(a){return meetingMessages(a).filter(m=>m.role==='user'&&!isMeetingEnd(m.text)).map(m=>m.text).join('\n');}
 function meetingCard(a){
   const rows=meetingMessages(a),busy=meetingConnecting||UI.rec.state==='reading';
-  return `<section class="card stack" aria-labelledby="meeting-title"><h2 id="meeting-title">Plan your event together</h2><p>Talk with your team. Your ElevenLabs agent listens, suggests improvements and helps you check the plan.</p><p class="small muted">Starting shares microphone audio with ElevenLabs and uses your account's credits.</p><p role="status">${meetingConnecting?'Connecting…':meetingSession?'Your meeting agent is listening.':rows.length?'Meeting notes saved. Continue when your team is ready.':'Ready when your team is.'}</p>${meetingError?`<p role="alert">${esc(meetingError)}</p>`:''}<div class="row">${meetingSession?'<button class="btn" data-meeting="stop">End meeting</button>':`<button class="btn go big" data-meeting="start" ${busy?'disabled':''}>Start meeting with ElevenLabs</button>`}<button class="btn ${rows.length?'go':''}" data-meeting="build" ${!studentNotes(a)||busy?'disabled':''}>${UI.rec.state==='reading'?'Checking your plan…':'Create budget draft'}</button></div>${rows.length?`<details><summary>Meeting transcript · ${rows.length} messages</summary><div class="meeting-transcript">${rows.map(m=>`<p><b>${m.role==='user'?'Your team':'ElevenLabs agent'}</b><br>${esc(m.text)}</p>`).join('')}</div></details>`:''}<details><summary>Use notes or try an example</summary><div class="stack"><label for="bridge-notes">Meeting notes</label><textarea id="bridge-notes" rows="5" placeholder="Event, date, attendees, each expense and agreed cost">${esc(a.transcript)}</textarea><div class="row"><button class="btn" data-meeting="notes">Create draft from notes</button><button class="btn" data-meeting="sample">Try sample meeting</button></div></div></details></section>`;
+  return `<section class="card stack" aria-labelledby="meeting-title"><h2 id="meeting-title">Plan your event together</h2><p>Talk with your team. Your ElevenLabs agent listens and helps check the plan. Say “end meeting” when you’re done; FundPath will stop listening and create your budget.</p><p class="small muted">Starting shares microphone audio with ElevenLabs and uses your account's credits.</p><p role="status">${meetingConnecting?'Connecting…':meetingSession?'Your meeting agent is listening.':rows.length?'Meeting notes saved. Continue when your team is ready.':'Ready when your team is.'}</p>${meetingError?`<p role="alert">${esc(meetingError)}</p>`:''}<div class="row">${meetingSession?'<button class="btn" data-meeting="stop">End meeting</button>':`<button class="btn go big" data-meeting="start" ${busy?'disabled':''}>Start meeting with ElevenLabs</button>`}<button class="btn ${rows.length?'go':''}" data-meeting="build" ${!studentNotes(a)||busy?'disabled':''}>${UI.rec.state==='reading'?'Checking your plan…':'Create budget draft'}</button></div>${rows.length?`<details><summary>Meeting transcript · ${rows.length} messages</summary><div class="meeting-transcript">${rows.map(m=>`<p><b>${m.role==='user'?'Your team':'ElevenLabs agent'}</b><br>${esc(m.text)}</p>`).join('')}</div></details>`:''}<details><summary>Use notes or try an example</summary><div class="stack"><label for="bridge-notes">Meeting notes</label><textarea id="bridge-notes" rows="5" placeholder="Event, date, attendees, each expense and agreed cost">${esc(a.transcript)}</textarea><div class="row"><button class="btn" data-meeting="notes">Create draft from notes</button><button class="btn" data-meeting="sample">Try sample meeting</button></div></div></details></section>`;
 }
 async function startMeeting(){
   const a=cur();if(!a||a.status!=='draft'||meetingSession||meetingConnecting)return;
@@ -48,6 +62,7 @@ async function startMeeting(){
         if(epoch!==meetingEpoch||cur()!==a||!m.message||m.isFinal===false)return;
         meetingMessages(a).push({role:m.source==='user'||m.role==='user'?'user':'agent',text:String(m.message)});
         a.transcript=studentNotes(a);save(a);render();
+        if((m.source==='user'||m.role==='user')&&isMeetingEnd(m.message))Promise.resolve().then(finishMeetingAndBuild);
       },
       onDisconnect:()=>{disconnected=true;if(epoch===meetingEpoch){meetingSession=null;meetingConnecting=false;render();}},
       onError:()=>{if(epoch===meetingEpoch){meetingError='Could not connect. Check microphone permission and the allowed website domains for your ElevenLabs agent.';render();}}
@@ -65,6 +80,7 @@ async function stopMeeting(){
 function prepareCompliantDraft(a){
   const adjustments=[];a.excludedLines=[];
   a.lines=a.lines.filter(l=>{
+    if(isMeetingEnd(l.item)||!hasExpense(`${l.item} ${l.note||''}`))return false;
     const text=`${l.item} ${l.vendor} ${l.note}`;
     if(PROHIBITED.test(text)||CLOTHING.test(text)){a.excludedLines.push({...l,reason:PROHIBITED.test(text)?'Prohibited purchase':'Requires a trademark / funding review'});return false;}
     return true;
