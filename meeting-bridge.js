@@ -94,6 +94,12 @@ fillFromTranscript=async function(text){
 const jeffValidate=validate;
 validate=function(a){
   const v=jeffValidate(a);
+  // Capital purchases stand on their own and do not need a fictional event.
+  const capitalOnly=a.lines.length>0&&a.lines.every(l=>l.category==='Capital Item'&&l.group==='nonevent');
+  if(capitalOnly){
+    v.all=v.all.filter(x=>x.msg!=='Add at least one event or trip.');
+    v.errors=v.all.filter(x=>x.sev==='error');v.reviews=v.all.filter(x=>x.sev==='review');
+  }
   // This preset demo skips officer setup; never invent president/advisor identities.
   if(a.defaultMeetingProfile){
     v.all=v.all.filter(x=>!x.club||/Treasurer|SA number/.test(x.msg));
