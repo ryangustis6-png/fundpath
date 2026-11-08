@@ -93,7 +93,13 @@ fillFromTranscript=async function(text){
 };
 const jeffValidate=validate;
 validate=function(a){
-  const v=jeffValidate(a),add=(msg)=>{const x={sev:'error',msg,src:S.tpl};v.all.push(x);v.errors.push(x);};
+  const v=jeffValidate(a);
+  // This preset demo skips officer setup; never invent president/advisor identities.
+  if(a.defaultMeetingProfile){
+    v.all=v.all.filter(x=>!x.club||/Treasurer|SA number/.test(x.msg));
+    v.errors=v.all.filter(x=>x.sev==='error');v.reviews=v.all.filter(x=>x.sev==='review');
+  }
+  const add=(msg)=>{const x={sev:'error',msg,src:S.tpl};v.all.push(x);v.errors.push(x);};
   if(!a.lines.length)add('Add at least one eligible expense before submitting.');
   if(!(TIERS[a.tier]>0))add('Choose a valid funding tier.');
   if(!Number.isFinite(+a.org.prior)||+a.org.prior<0)add('Prior funding must be a valid nonnegative amount.');
@@ -143,4 +149,14 @@ document.addEventListener('click',async e=>{
 document.addEventListener('click',e=>{if(e.target.closest('[data-stage],[data-open],#club-chip,[data-act="stage"]')&&(meetingSession||meetingConnecting))stopMeeting();},true);
 $('#role').addEventListener('change',()=>{if(meetingSession||meetingConnecting)stopMeeting();});
 window.addEventListener('pagehide',()=>{++meetingEpoch;meetingSession?.endSession();});
+// Open directly in Michael's Banking Club workspace without an officer setup form.
+let bankingWorkspace=Object.values(Store.apps).find(a=>a.defaultMeetingProfile);
+if(!bankingWorkspace){
+  bankingWorkspace=newApp('Banking Club',4);bankingWorkspace.defaultMeetingProfile=true;
+  Object.assign(bankingWorkspace.org,{sa:'SA10472',treasurer:'Michael Rose',treasurerEmail:'rosemw2@miamioh.edu',prior:0});
+  save(bankingWorkspace,true);
+}
+UI.role='org';UI.appId=bankingWorkspace.id;UI.stage=1;
+UI.showAgent=bankingWorkspace.status==='draft';
+lsSet('fp.role',UI.role);lsSet('fp.app',UI.appId);lsSet('fp.stage',UI.stage);
 render();
