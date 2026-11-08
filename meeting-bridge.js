@@ -77,7 +77,7 @@ async function startMeeting(){
       onError:()=>{if(epoch===meetingEpoch){meetingError='Could not connect. Check microphone permission and the allowed website domains for your ElevenLabs agent.';render();}}
     });
     if(epoch!==meetingEpoch||cur()!==a){await session.endSession();return;}
-    if(!disconnected){meetingSession=session;session.sendContextualUpdate?.(`You are helping ${a.club} plan an ASG budget. Listen to the team and offer concise suggestions. Do not claim to submit or approve anything. Budget limits: tier ${a.tier}, remaining ${totals(a).cap}; food ${totals(a).foodCap}; hotel $50/person/night; flights $300/person; admin/storage $1000 each; speakers $3000. Alcohol, tobacco and gambling are prohibited. Ask for event dates, attendance, itemized costs, required quotes and Miami Central listing. Flag uncertain eligibility. The app validates the draft after the meeting.`);}
+    if(!disconnected){meetingSession=session;session.sendContextualUpdate?.(`You are helping ${a.club} plan an ASG budget. Listen to the team and offer concise suggestions. Do not claim to submit or approve anything. Budget limits: tier ${a.tier}, remaining ${totals(a).cap}; food ${totals(a).foodCap}; hotel $50/person/night; flights $300/person; admin/storage $1000 each; speakers $3000. Alcohol, tobacco and gambling are prohibited. Capital purchases need no quote or Miami Central listing. Standalone marketing and administrative purchases also need no listing. Ask for dates, attendance and Miami Central listing only for actual events/trips; quotes remain required for hotels and flights. Flag uncertain eligibility. The app validates the draft after the meeting.`);}
   }catch{if(epoch===meetingEpoch)meetingError='Could not start your meeting. Check microphone permission, your connection and the agent’s allowed website domains. Your notes are saved.';}
   finally{if(epoch===meetingEpoch){meetingConnecting=false;render();}}
 }
@@ -123,12 +123,15 @@ fillFromTranscript=async function(text){
 const jeffValidate=validate;
 validate=function(a){
   const v=jeffValidate(a);
-  // Capital purchases stand on their own and do not need a fictional event.
-  const capitalOnly=a.lines.length>0&&a.lines.every(l=>l.category==='Capital Item'&&l.group==='nonevent');
-  if(capitalOnly){
+  // Standalone purchases need neither a fictional event nor a campus listing.
+  const standaloneOnly=a.lines.length>0&&a.lines.every(l=>['Capital Item','Marketing','Admin Item'].includes(l.category)&&l.group==='nonevent');
+  if(standaloneOnly){
     v.all=v.all.filter(x=>x.msg!=='Add at least one event or trip.');
     v.errors=v.all.filter(x=>x.sev==='error');v.reviews=v.all.filter(x=>x.sev==='review');
   }
+  // Capital items are exempt from the attachment's over-$1,000 quote gate.
+  v.all=v.all.filter(x=>!(x.fix==='quote'&&a.lines.some(l=>l.id===x.line&&l.category==='Capital Item')));
+  v.errors=v.all.filter(x=>x.sev==='error');v.reviews=v.all.filter(x=>x.sev==='review');
   // This preset demo skips officer setup; never invent president/advisor identities.
   if(a.defaultMeetingProfile){
     v.all=v.all.filter(x=>!x.club||/Treasurer|SA number/.test(x.msg));
@@ -142,6 +145,14 @@ validate=function(a){
   if(a.lines.some(l=>!Number.isFinite(+l.amount)||!CAT_MAP[l.category]))add('Every expense needs a valid amount and funding category.');
   if(a.meetingQuestions?.length&&!a.meetingAmountsConfirmed)add('Check the itemization of the meeting amounts and confirm the lines below.');
   return v;
+};
+const jeffBudgetEditor=budgetEditor;
+budgetEditor=function(a,locked){
+  let html=jeffBudgetEditor(a,locked);
+  for(const l of a.lines.filter(l=>l.category==='Capital Item')){
+    html=html.replace(`<label class="btn sm" for="q-${l.id}">Add quote</label>`,`<label class="btn sm" for="q-${l.id}">Add quote (optional)</label>`);
+  }
+  return html;
 };
 const jeffStBudget=stBudget;
 stBudget=function(a){
