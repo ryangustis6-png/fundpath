@@ -588,7 +588,7 @@ const A = {
   workdayView: d => { UI.modal = () => workdayModal(d.id); render(); },
   submitSA: d => { const s = S.spend.find(x => x.id === d.id); const e = evaluateSpend(s, S);
     if (e.flags.some(f => f.rule === "TRAINING")) return toast("Treasurer isn't Workday-authorized yet", "bad");
-    s.status = "advisor"; s.wd = { status: "In progress · awaiting advisor", ref: s.wd && s.wd.ref || wdRef(), at: new Date().toISOString() }; (s.history = s.history || []).push({ at: todayIso(), who: orgById(s.orgId).treasurer, action: "Submitted" }); logEvt(s.orgId, `${s.id} submitted to advisor (${money(e.total)})`); save(); render(); toast(e.level === "deny" ? "Submitted. The reviewer will see the open flags" : "Submitted to your advisor"); },
+    s.status = "advisor"; s.wd = { status: "In progress · awaiting advisor", ref: s.wd && s.wd.ref || wdRef(), at: new Date().toISOString() }; (s.history = s.history || []).push({ at: todayIso(), who: orgById(s.orgId).treasurer, action: "Submitted" }); logEvt(s.orgId, `${s.id} submitted to advisor (${money(e.total)})`); save(); render(); sendToWorkday(s); toast(e.level === "deny" ? "Submitted. The reviewer will see the open flags" : "Submitted to your advisor"); },
   advisorApprove: d => { const s = S.spend.find(x => x.id === d.id); s.status = "review"; s.wd = { status: "In progress · awaiting Accounts Payable", ref: (s.wd && s.wd.ref) || wdRef(), at: new Date().toISOString() }; s.history.push({ at: todayIso(), who: `${orgById(s.orgId).advisor} (advisor)`, action: "Approved" }); logEvt(s.orgId, `${s.id} approved by advisor, now with Accounts Payable`); save(); render(); toast("Approved. Sent to Accounts Payable + ASG"); },
   returnSA: d => { const s = S.spend.find(x => x.id === d.id); const n = $("#notes-" + d.id); s.notes = n ? n.value : "Returned by advisor"; s.status = "returned"; if (s.wd) s.wd.status = "Sent back"; s.history.push({ at: todayIso(), who: S.role === "advisor" ? "Advisor" : "Accounts Payable / ASG", action: "Returned", note: s.notes }); logEvt(s.orgId, `${s.id} returned: ${s.notes}`); save(); render(); toast("Returned to the treasurer"); },
   approveClean: d => { const s = S.spend.find(x => x.id === d.id); const e = evaluateSpend(s, S); const removed = s.lines.filter(l => worst(e.lineFlags[l.id] || []) === "deny"); s.lines = s.lines.filter(l => worst(e.lineFlags[l.id] || []) !== "deny"); s.notes = `Removed: ${removed.map(l => `${l.desc} (${(e.lineFlags[l.id] || []).map(f => RULES[f.rule].title).join(", ")})`).join("; ")}`; A.apApprove(d, true); },
@@ -657,16 +657,25 @@ const EXEC = ["President", "Treasurer", "VP Events", "VP Marketing", "Exec board
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 function M() { S.meeting = S.meeting || { transcript: [], built: null, stage: "idle", pipe: [] }; S.meeting.pipe = S.meeting.pipe || []; return S.meeting; }
 
-async function speak(text) {
+// ElevenLabs voice via /api/tts. VOICE.el: null = not tried yet, true = working, false = not configured on this deploy.
+// opts.quiet: don't fall back to the robotic browser voice (used for the demo meeting's speakers).
+const ROLE_VOICE = { President: "maya", Treasurer: "jordan", "VP Programming": "sam", "VP Education": "river", "VP Marketing": "chris", "VP Social": "roger", "VP Events": "sam" };
+async function speak(text, voice, opts = {}) {
   if (!VOICE.on || !text) return;
   VOICE.speaking = true; paintVoice();
   try {
-    const r = await fetch("/api/tts", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text }) });
-    if (!r.ok || !(r.headers.get("content-type") || "").includes("audio")) throw new Error("no tts");
-    const a = new Audio(URL.createObjectURL(await r.blob())); VOICE.engine = "ElevenLabs";
+    if (VOICE.el === false) throw new Error("no tts");
+    const r = await fetch("/api/tts", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text, voice: voice || "fundpath" }) });
+    if (!r.ok || !(r.headers.get("content-type") || "").includes("audio")) {
+      if (r.status === 501 || r.status === 404) VOICE.el = false;
+      else { const j = await r.json().catch(() => ({})); console.warn("ElevenLabs voice failed:", j.error, j.detail || ""); if (!VOICE.warned) { VOICE.warned = true; toast(`ElevenLabs voice failed (${j.error || r.status}). Using the browser voice.`, "bad"); } }
+      throw new Error("no tts");
+    }
+    VOICE.el = true; VOICE.engine = "ElevenLabs";
+    const a = new Audio(URL.createObjectURL(await r.blob()));
     await a.play(); await new Promise(res => { a.onended = res; a.onerror = res; });
   } catch (e) {
-    if (window.speechSynthesis) { VOICE.engine = "browser voice"; await new Promise(res => { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = 1.04; u.onend = res; u.onerror = res; speechSynthesis.speak(u); setTimeout(res, 30000); }); }
+    if (!opts.quiet && window.speechSynthesis) { VOICE.engine = "browser voice"; await new Promise(res => { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = 1.04; u.onend = res; u.onerror = res; speechSynthesis.speak(u); setTimeout(res, 30000); }); }
   }
   VOICE.speaking = false; paintVoice();
 }
@@ -712,13 +721,28 @@ async function toggleRecord() {
       VOICE.recording = false; stream.getTracks().forEach(t => t.stop()); render(); toast("Transcribing with ElevenLabs…");
       const blob = new Blob(VOICE.chunks, { type: mr.mimeType || "audio/webm" });
       const b64 = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(",")[1]); fr.readAsDataURL(blob); });
-      try { const r = await fetch("/api/stt", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ audio: b64, mime: blob.type }) }); const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status);
-        (j.text || "").split(/(?<=[.?!])\s+/).forEach(x => heard(x)); toast("Transcribed");
-      } catch (e) { toast("ElevenLabs isn't connected on this deploy. Use the live mic or demo meeting.", "bad"); }
+      try { const r = await fetch("/api/stt", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ audio: b64, mime: blob.type }) }); const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || r.status);
+        const turns = Array.isArray(j.transcript) && j.transcript.length ? j.transcript : [[UI.speaker || "Exec board", j.text || ""]];
+        turns.forEach(([w, t]) => String(t).split(/(?<=[.?!])\s+/).forEach(x => heard(x, w))); toast("Transcribed with ElevenLabs");
+      } catch (e) { toast(/not configured|501|404/.test(String(e.message)) ? "ElevenLabs isn't set up on this deploy (add ELEVENLABS_API_KEY in Vercel). Use the live mic or demo meeting." : `ElevenLabs couldn't transcribe it: ${e.message}`, "bad"); }
     };
     mr.start(); VOICE.recording = true; render();
   } catch (e) { toast("Microphone blocked. Allow it in the address bar.", "bad"); }
 }
+
+// Sends the Submit_Spend_Authorization payload to /api/workday (simulated unless WORKDAY_MODE=live on Vercel).
+async function sendToWorkday(s) {
+  try {
+    const r = await fetch("/api/workday", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "submit", payload: workdayPayload(s, S) }) });
+    if (r.status === 404) return; // static hosting without the API: keep the local simulation
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { toast(`Workday didn't accept ${s.id}: ${j.error || r.status}`, "bad"); return; }
+    s.wd = { ...(s.wd || {}), ref: j.ref || (s.wd && s.wd.ref), mode: j.mode, sentAt: j.at };
+    save(); render();
+  } catch (e) {}
+}
+async function loadHealth() { try { const r = await fetch("/api/health"); if (r.ok) { UI.health = await r.json(); if (UI.health.elevenlabs && !UI.health.elevenlabs.configured) VOICE.el = false; render(); } } catch (e) {} }
+setTimeout(loadHealth, 0);
 
 function sheetPreview(p, o) {
   const evn = id => (p.events.find(e => e.id === id) || {}).name || "";
@@ -787,7 +811,7 @@ function viewWorkday() {
   const list = S.spend.filter(s => s.kind === "SA" && (asg || s.orgId === o.id)).slice().reverse();
   return `<header class="ph"><div><h1>Workday ${asg ? "sync" : ""}</h1><p>FundPath works alongside Workday. It builds each Spend Authorization from the approved ASG budget, then sends it to Workday so nobody types it twice.</p></div>
     <div class="ph-actions"><button class="btn ghost" data-a="eibAll">Download EIB (CSV)</button></div></header>
-  <div class="banner info"><b>Demo tenant.</b> Submissions here go to a simulated Workday tenant. In production FundPath calls Workday's <code>Submit_Spend_Authorization</code> web service (Resource Management) with an integration account set up by Miami IT, or uploads the same data as an EIB. The payload below is exactly what would be sent.</div>
+  <div class="banner info"><b>${UI.health && UI.health.workday && UI.health.workday.mode === "live" ? "Connected to Workday." : "Simulated Workday tenant."}</b> ${UI.health && UI.health.workday && UI.health.workday.mode === "live" ? "Submissions go to Miami's Workday through FundPath's integration account." : "Submissions go through FundPath's Workday route (/api/workday) in simulated mode until Miami IT issues an integration account."} In production FundPath calls Workday's <code>Submit_Spend_Authorization</code> web service (Resource Management) with an integration account set up by Miami IT, or uploads the same data as an EIB. The payload below is exactly what would be sent.</div>
   <section class="card"><table class="tbl"><thead><tr><th>Spend Authorization</th>${asg ? "<th>Org</th>" : ""}<th class="r">Total</th><th>FundPath</th><th>Workday</th><th>Workday ref</th><th></th></tr></thead><tbody>
   ${list.map(s => { const tot = evaluateSpend(s, S).total; const w = s.wd || {}; return `<tr><td class="mono">${s.id}<br><small class="muted">${esc(s.descr)}</small></td>${asg ? `<td>${esc(orgById(s.orgId).name)}</td>` : ""}<td class="r mono">${money(tot)}</td><td>${chip(s.status)}</td><td>${w.status ? `<span class="lv ${/Approved/.test(w.status) ? "ok" : /back/.test(w.status) ? "deny" : "warn"}">${esc(w.status)}</span>` : `<span class="muted small">Not sent</span>`}</td><td class="mono small">${esc(w.ref || "—")}</td><td class="r"><button class="btn sm ghost" data-a="wdPayload" data-id="${s.id}">Payload</button> <button class="btn sm ghost" data-a="workdayView" data-id="${s.id}">Copy sheet</button></td></tr>`; }).join("") || `<tr><td colspan=7 class=muted>No Spend Authorizations yet.</td></tr>`}
   </tbody></table></section>
