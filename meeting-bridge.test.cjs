@@ -23,7 +23,7 @@ const fs=require('node:fs'),http=require('node:http'),path=require('node:path'),
   await page.screenshot({path:'merged-workday-desktop.png',fullPage:true});
   // Verify Jeff's full mock sequence continues: Workday -> AP -> pickup -> receipts/audit.
   await page.evaluate(()=>sendToWorkday());assert.equal(await page.evaluate(()=>cur().status),'sa_submitted');
-  await page.evaluate(()=>{apDecide(cur(),true,'Checked');});assert.equal(await page.evaluate(()=>cur().status),'card_ready');
+  await page.evaluate(()=>{UI.role='ap';apDecide(cur(),true,'Checked');UI.role='org';render();});assert.equal(await page.evaluate(()=>cur().status),'card_ready');
   await page.evaluate(()=>{const a=cur();a.card.status='picked';a.status='card_picked';UI.stage=5;render();});
   assert.equal(await page.getByRole('heading',{name:'Receipts & audit',exact:true}).count(),1);
   await page.evaluate(()=>{const a=cur();a.receipts=[{id:'receipt-1',date:'2026-10-20',vendor:'Campus Catering',desc:'Workshop food',amount:1000,tip:0,category:'food',sample:true,hasFile:false}];submitAudit();});

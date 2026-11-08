@@ -9,6 +9,8 @@
 .receipt-option>div{flex:1 1 220px}
 .receipt-library>p,.receipt-library>.stack{margin-top:16px}
 .total .pill{max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.ap-request-list{display:flex;flex-wrap:wrap;gap:12px}
+.ap-request-list button{display:flex;flex-direction:column;align-items:flex-start;text-align:left;white-space:normal}
 @media(max-width:600px){.club-switcher{flex:1 1 100%}.club-switcher select{flex:1;max-width:none}}
 [data-meeting],button.btn{min-height:44px}
 details>summary{cursor:pointer;min-height:44px;padding-block:10px}
