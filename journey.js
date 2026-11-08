@@ -112,10 +112,10 @@ for(const [route,role] of [['review','asg'],['apportal','ap'],['advq','advisor']
 A.journeyReview=d=>{UI.journeyReview=d.id||null;render();document.querySelector('#main')?.focus();};
 VIEWS.overview = () => { const q=roleQueue(S.role),route={asg:'review',ap:'apportal',advisor:'advq'}[S.role];return journeyHeading(0,S.role==='ap'?'Your payment review desk':S.role==='asg'?'Your Treasury review desk':'Your advisor review desk')+`<section class="journey-panel welcome"><h2>${q.length?`${q.length} requests need your review`:'You’re up to date'}</h2><p>${S.role==='ap'?'The assistant recommends. You make the final decision.':'Open one request, review its details and record your decision.'}</p>${journeyGo('Continue to review queue',route)}</section>`; };
 
-// Keep the supplied agent wired, without starting a potentially chargeable session.
-voiceConnectionCard = () => `<section class="connection-card"><h2>Your ElevenLabs agent is saved</h2><p>Live voice is paused because your plan and billing have not been verified. This demo will not start an ElevenLabs call.</p><label for="savedAgentId">Public agent identifier</label><input id="savedAgentId" value="${esc(configuredAgentId())}" autocomplete="off">${journeyButton('Save agent','saveAgentId','',true)}<p class="small muted">Use meeting notes or the sample while voice is paused. Saving an identifier makes no provider request.</p></section>`;
-A.startAgent = async () => toast('Live voice is paused until billing is verified. No call was started.','bad');
-A.enableLiveElevenLabs = () => { liveElevenLabsEnabled=false;render(); };
+// The user authorized using their ElevenLabs credits. Keep the original SDK
+// lifecycle and session-only opt-in; never start calls on page load.
+const creditedVoiceCard=voiceConnectionCard;
+voiceConnectionCard=()=>creditedVoiceCard().replace('Your subscription and remaining credits have not been verified. Live use starts only when you press Connect.','You reported available free credits. FundPath cannot check your balance or prevent ElevenLabs overage charges. Live use starts only when you press Connect; no billing settings are changed.');
 A.meetRecord = () => toast('Paid transcription is paused. Paste meeting notes instead.','bad');
 const journeyQuoteView=VIEWS.quotes;
 VIEWS.quotes=()=>journeyQuoteView().replace('<form ', '<p class="banner">Live research is paused to prevent provider charges. No prices will be invented. You can still review existing source-backed offers.</p><form ').replace(/<button class="btn" (disabled)?>(Researching supplier offers…|Find real offers)<\/button>/,'<button class="btn" disabled>Live research paused</button>');

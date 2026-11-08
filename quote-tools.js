@@ -31,5 +31,7 @@ document.addEventListener('submit',async event=>{
  }catch{toast('Quote could not be stored. Check browser storage and try again.','bad');button.disabled=false;}
 });
 const renderWithQuoteTools=render;
-render=function(){if(S&&S.role==='treasurer'){const p=editableQuoteProposal();if(p&&capHotelRequests(p,S.settings).length){p.execReview=null;save();}}renderWithQuoteTools();};
+render=function(){if(S&&S.role==='treasurer'){const p=editableQuoteProposal();if(p&&capHotelRequests(p,S.settings).length){p.execReview=null;save();}}renderWithQuoteTools();const notes=document.querySelector('#journeyNotes');if(notes)notes.readOnly=!!liveConversation;};
+const paintMeetingTranscript=paintTranscript;
+paintTranscript=function(){paintMeetingTranscript();const notes=document.querySelector('#journeyNotes');if(notes&&liveConversation)notes.value=M().transcript.filter(([who])=>who!=='ElevenLabs agent').map(([who,text])=>`${who}: ${text}`).join('\n');};
 if(typeof module!=='undefined')module.exports={capHotelRequests};
