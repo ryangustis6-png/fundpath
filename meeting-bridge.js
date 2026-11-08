@@ -31,6 +31,20 @@ fromSentence=function(s,amounts,event){
 // Only explicit expense categories can create a budget line. Conversation context
 // never becomes an event; event/trip headers must be deliberately stated.
 const jeffParseTranscript=parseTranscript;
+function consolidateMeetingExpenses(lines,events=[]){
+  const result=[];
+  const identity=l=>(`${l.item} ${l.note||''}`.toLowerCase().match(/\b(projector|laptop|computer|tablet|monitor|printer|camera|microphone|chair|table|tent|banner|poster|flyer|subscription|software)s?\b/)||[])[1]||'';
+  const context=l=>events.find(e=>e.id===l.eventId)?.name?.toLowerCase().trim()||l.eventId||'';
+  for(const line of lines){
+    const noun=identity(line),separate=/\b(another|additional|second|third|separate|different)\b/i.test(line.item);
+    const previous=!separate&&[...result].reverse().find(l=>l.category===line.category&&context(l)===context(line)&&(!noun||!identity(l)||identity(l)===noun));
+    if(previous){
+      const id=previous.id,mentions=(previous.meetingMentions||1)+1,notes=[...new Set([previous.note,line.note].filter(Boolean))].join(' · ');
+      Object.assign(previous,line,{id,note:notes,meetingMentions:mentions});
+    }else result.push({...line,meetingMentions:line.meetingMentions||1});
+  }
+  return result;
+}
 parseTranscript=function(text){
   const result={tier:null,prior:null,events:[],lines:[],questions:[]};let event=null;
   const sentences=String(text).split(/\n+|(?<=[.!?])\s+/).flatMap(s=>s.split(/\s+(?:and|then)\s+(?=(?:capital|flights?|gas|hotels?|speaker\s+fees?|food|marketing|administrative)\b)/i));
@@ -48,6 +62,7 @@ parseTranscript=function(text){
     const label=sentence.replace(/\$\s*[\d,.]+|\b\d+(?:\.\d{1,2})?\s+dollars\b/gi,'').replace(/\s+/g,' ').trim();
     result.lines.push(mkLine(standalone?'nonevent':'event',standalone?null:event?.id||null,label,category,amounts.at(-1),'',sentence));
   }
+  result.lines=consolidateMeetingExpenses(result.lines,result.events);
   // Do not keep a meeting/event heading with no actual event expenses.
   result.events=result.events.filter(e=>result.lines.some(l=>l.eventId===e.id));
   return result;
@@ -97,6 +112,7 @@ function prepareCompliantDraft(a){
     if(PROHIBITED.test(text)||CLOTHING.test(text)){a.excludedLines.push({...l,reason:PROHIBITED.test(text)?'Prohibited purchase':'Requires a trademark / funding review'});return false;}
     return true;
   });
+  a.lines=consolidateMeetingExpenses(a.lines,a.events);
   function cap(label,limit,predicate){
     const lines=a.lines.filter(predicate),total=sum(lines.map(l=>l.amount));
     if(total>limit){for(const l of lines){const before=l.amount;l.amount=Math.floor(cents(before)*Math.max(0,limit)/total)/100;adjustments.push(`${l.item}: ${money(before)} → ${money(l.amount)} (${label}).`);}}
@@ -195,6 +211,20 @@ document.addEventListener('click',async e=>{
 document.addEventListener('click',e=>{if(e.target.closest('[data-stage],[data-open],#club-chip,[data-act="stage"]')&&(meetingSession||meetingConnecting))stopMeeting();},true);
 $('#role').addEventListener('change',()=>{if(meetingSession||meetingConnecting)stopMeeting();});
 window.addEventListener('pagehide',()=>{++meetingEpoch;meetingSession?.endSession();});
+let restartingDemo=false;
+async function restartBankingDemo(){
+  if(restartingDemo)return;restartingDemo=true;
+  try{
+    await stopMeeting();
+    for(const a of Object.values(Store.apps))if(a.defaultMeetingProfile){a.defaultMeetingProfile=false;save(a,true);}
+    const a=newApp('Banking Club',4);a.defaultMeetingProfile=true;
+    Object.assign(a.org,{sa:'SA10472',treasurer:'Michael Rose',treasurerEmail:'rosemw2@miamioh.edu',prior:0});
+    bankingWorkspace=a;UI.role='org';UI.appId=a.id;UI.stage=1;UI.fill=null;UI.rec={state:'idle'};UI.manual=false;UI.showAgent=true;UI.showFix=false;meetingError='';
+    save(a,true);lsSet('fp.role','org');lsSet('fp.app',a.id);lsSet('fp.stage',1);render();window.scrollTo({top:0});
+  }finally{restartingDemo=false;}
+}
+document.querySelector('.top-in')?.insertAdjacentHTML?.('beforeend','<button class="btn sm" id="restart-demo">Restart demo</button>');
+document.addEventListener('click',e=>{if(e.target.closest('#restart-demo'))restartBankingDemo();});
 // Open directly in Michael's Banking Club workspace without an officer setup form.
 let bankingWorkspace=Object.values(Store.apps).find(a=>a.defaultMeetingProfile);
 if(!bankingWorkspace){
