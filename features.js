@@ -160,7 +160,14 @@ async function askNext() {
 
 Object.assign(A, {
   meetDemo: async () => { const m = M(); if (VOICE.playing) return; VOICE.playing = true; UI.demoAuto = true; m.stage = "idle"; render();
-    for (const [w, t] of DEMO_MEETING) { if (!VOICE.playing) break; await sleep(650 + Math.min(1500, t.length * 8)); heard(t, w); }
+    for (const [w, t] of DEMO_MEETING) {
+      if (!VOICE.playing) break;
+      const trigger = /build (our|the|a) budget|fund ?path,? (build|make)/i.test(t);
+      if (!trigger) heard(t, w);
+      if (VOICE.el === false || !VOICE.on) await sleep(650 + Math.min(1500, t.length * 8)); // no ElevenLabs: read along
+      else { const t0 = Date.now(); await speak(t, ROLE_VOICE[w] || "sam", { quiet: true }); if (Date.now() - t0 < 400) await sleep(650 + Math.min(1500, t.length * 8)); }
+      if (trigger) heard(t, w);
+    }
     VOICE.playing = false; },
   meetReset: () => { S.meeting = { transcript: [], built: null, stage: "idle", pipe: [] }; VOICE.playing = false; UI.demoAuto = false; save(); render(); },
   meetBuild: async () => { const m = M(); const o = ORG(); if (!m.transcript.length || ["building", "question", "running"].includes(m.stage)) return; m.stage = "building"; m.pipe = []; m.conf = null; m.payPlan = null; save(); render();
