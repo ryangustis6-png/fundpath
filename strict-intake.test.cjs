@@ -39,3 +39,9 @@ assert.equal(vm.runInContext('receiptFieldsFromText(receiptText).amount',ctx),un
 ctx.receiptText='SHOP\nTOTAL\n$107.00';
 assert.equal(vm.runInContext('receiptFieldsFromText(receiptText).amount',ctx),107);
 console.log('PASS: receipt text prefills vendor/date/total/category; subtotal and tax cannot substitute for the total.');
+vm.runInContext("cur().events=[];cur().lines=parseTranscript('Food $100. Speaker fees $250. Administrative $50.').lines;prepareCompliantDraft(cur());",ctx);
+assert.equal(vm.runInContext('validate(cur()).errors.length',ctx),0);
+assert.equal(vm.runInContext("cur().lines.every(l=>l.group==='nonevent'&&!l.eventId)",ctx),true);
+vm.runInContext("cur().lines.push(mkLine('event',null,'Gas','Trip: Gas',50));",ctx);
+assert.equal(vm.runInContext("validate(cur()).errors.some(x=>/link this travel expense/.test(x.msg))",ctx),true);
+console.log('PASS: food and speaker fees stand alone; travel still requires its event relationship.');

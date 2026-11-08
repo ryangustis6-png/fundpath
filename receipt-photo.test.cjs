@@ -5,6 +5,10 @@ const fs=require('node:fs'),http=require('node:http'),path=require('node:path'),
  try{
   browser=await chromium.launch({headless:true,channel:'msedge'});const page=await browser.newPage();page.setDefaultTimeout(60000);page.on('pageerror',e=>console.error('Browser:',e.message));await page.goto('http://127.0.0.1:4195');
   const previous=await page.evaluate(()=>cur().id);await page.getByRole('button',{name:'Restart demo',exact:true}).click();
+  await page.emulateMedia({colorScheme:'dark'});
+  assert.equal(await page.evaluate(()=>getComputedStyle(document.body).backgroundColor),'rgb(255, 255, 255)');
+  await page.evaluate(()=>document.documentElement.dataset.theme='dark');
+  assert.equal(await page.evaluate(()=>getComputedStyle(document.body).backgroundColor),'rgb(255, 255, 255)');
   await page.waitForFunction(id=>cur().id!==id,previous);
   assert.equal(await page.evaluate(id=>!!Store.apps[id],previous),true);
   assert.equal(await page.evaluate(()=>cur().org.sa),'SA10472');

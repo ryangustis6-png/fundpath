@@ -1,5 +1,6 @@
 /* Keep the full interface in the requested sans serif collection. */
 :root{--font:"Source Sans 3","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;--mono:var(--font)}
+:root,:root[data-theme="dark"],:root:not([data-theme="light"]){color-scheme:light!important;--bg:#ffffff;--card:#ffffff;--soft:#f6f5f3;--ink:#1b1718;--muted:#635b5c;--line:#e3dedb;--red:#c3142d;--red-ink:#ffffff;--red-soft:#fbe8ea;--ok:#17784a;--ok-soft:#e2f3e9;--warn:#995500;--warn-soft:#fcf0dc;--bad:#b42318;--bad-soft:#fde8e6;--info:#245f96;--info-soft:#e5eff9;--shadow:0 1px 2px rgba(40,20,20,.05),0 6px 20px rgba(40,20,20,.05)}
 .meeting-transcript{max-height:320px;overflow:auto;display:grid;gap:16px;margin-top:16px}
 [data-meeting],button.btn{min-height:44px}
 details>summary{cursor:pointer;min-height:44px;padding-block:10px}
