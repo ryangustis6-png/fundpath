@@ -107,6 +107,7 @@ async function stopMeeting(){
   render();
 }
 function prepareCompliantDraft(a){
+  if(a.requestedBudget){a.lines=consolidateMeetingExpenses(a.lines,a.events);return;}
   const adjustments=[];a.excludedLines=[];
   a.lines=a.lines.filter(l=>{
     const category=l.sourceSheetRow?l.category:spokenExpenseCategory(l.item)||spokenExpenseCategory(l.note||'');
@@ -155,7 +156,7 @@ validate=function(a){
   }
   // Capital items are exempt from the attachment's over-$1,000 quote gate.
   v.all=v.all.filter(x=>!(x.fix==='quote'&&a.lines.some(l=>l.id===x.line&&l.category==='Capital Item')));
-  v.all=v.all.filter(x=>!(x.sev==='review'&&x.src==='ASG committee criterion: itemized'&&a.lines.some(l=>l.id===x.line&&l.sourceSheetRow)));
+  v.all=v.all.filter(x=>!(x.sev==='review'&&x.src==='ASG committee criterion: itemized'&&a.lines.some(l=>l.id===x.line&&l.sourceSheetRow&&(!l.fileImported||l.sourceTemplate))));
   v.errors=v.all.filter(x=>x.sev==='error');v.reviews=v.all.filter(x=>x.sev==='review');
   // This preset demo skips officer setup; never invent president/advisor identities.
   if(a.defaultMeetingProfile||a.presetClubKey){

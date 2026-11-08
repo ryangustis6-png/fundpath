@@ -19,6 +19,7 @@ function seedPersonalFinanceProposal(a){
   a.lines=p.lines.map(row=>({...mkLine('nonevent',null,row.item,row.category,row.amount,'','Imported from your supplied funding proposal.'),sourceSheetRow:row.row,sourceEvent:row.sourceEvent||'',sourceComment:row.sourceComment}));
   linkImportedProposalEvents(a);
   a.source=p.fileName;a.importedProposal=true;a.proposalSourceTotal=p.total;
+  a.fileImportIssues=[];a.fileOrganization='';
   // Importing a structured proposal must preserve every source row, including venue fees.
   for(const l of a.lines)if(!NONEVENT_CATS.includes(l.category))NONEVENT_CATS.push(l.category);
 }
@@ -39,7 +40,7 @@ async function selectClub(key){
   if(!CLUB_PROFILES[key])return;
   if(meetingSession||meetingConnecting)await stopMeeting();
   const a=clubRun(key)||createClubRun(key);
-  UI.role='org';UI.appId=a.id;UI.stage=1;UI.fill=null;UI.rec={state:'idle'};UI.manual=false;UI.showAgent=a.status==='draft';UI.showFix=false;meetingError='';
+  UI.role='org';UI.appId=a.id;UI.stage=1;UI.fill=null;UI.rec={state:'idle'};UI.manual=false;UI.showAgent=a.status==='draft';UI.showFix=false;UI.budgetInputMode='meeting';meetingError='';
   lsSet('fp.activeClubPreset',key);lsSet('fp.role','org');lsSet('fp.app',a.id);lsSet('fp.stage',1);render();window.scrollTo({top:0});
 }
 function mountClubControls(){

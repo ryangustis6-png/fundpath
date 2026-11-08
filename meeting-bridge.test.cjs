@@ -14,7 +14,7 @@ const fs=require('node:fs'),http=require('node:http'),path=require('node:path'),
   assert.equal(await page.evaluate(()=>studentNotes(cur()).includes('champagne')),false);
   await page.getByRole('button',{name:'Create budget draft'}).click();await page.waitForFunction(()=>!meetingSession&&cur().lines.length>0);
   assert.equal(await page.evaluate(()=>window.voiceStopped),true);
-  await page.evaluate(()=>{const a=cur();a.events=[{id:'e',type:'Event',name:'Workshop',date:'2027-02-10',onHub:true}];a.lines=[mkLine('event','e','Food workshop catering','Event: Food',1500),mkLine('event','e','Food beer','Event: Food',100)];prepareCompliantDraft(a);Object.assign(a.org,{treasurer:'Jordan',president:'Maya',advisor:'Pat',email:'club@miamioh.edu',presidentEmail:'maya@miamioh.edu',treasurerEmail:'jordan@miamioh.edu',sa:'SA10384'});render();});
+  await page.evaluate(()=>{const a=cur();a.requestedBudget=false;a.events=[{id:'e',type:'Event',name:'Workshop',date:'2027-02-10',onHub:true}];a.lines=[mkLine('event','e','Food workshop catering','Event: Food',1500),mkLine('event','e','Food beer','Event: Food',100)];prepareCompliantDraft(a);Object.assign(a.org,{treasurer:'Jordan',president:'Maya',advisor:'Pat',email:'club@miamioh.edu',presidentEmail:'maya@miamioh.edu',treasurerEmail:'jordan@miamioh.edu',sa:'SA10384'});render();});
   assert.equal(await page.evaluate(()=>cur().lines.length),1);assert.equal(await page.evaluate(()=>cur().lines[0].amount),1000);assert.equal(await page.evaluate(()=>cur().excludedLines.length),1);
   await page.screenshot({path:'merged-budget-desktop.png',fullPage:true});
   await page.getByRole('button',{name:'Submit proposal to ASG'}).click();
@@ -32,9 +32,9 @@ const fs=require('node:fs'),http=require('node:http'),path=require('node:path'),
   assert.equal(await page.evaluate(()=>cur().audit.status),'passed');
   // Cannot bypass missing evidence or exhausted tier funding.
   await page.evaluate(()=>{const a=cur();a.status='draft';a.sa=null;a.asg=null;UI.stage=1;a.lines=[mkLine('event','e','Hotel room','Trip: Hotels',100)];submitBudget();});
-  assert.equal(await page.evaluate(()=>cur().status),'draft');
-  await page.evaluate(()=>{const a=cur();a.lines=[mkLine('event','e','Workshop catering','Event: Food',100)];a.org.prior=5000;submitBudget();});assert.equal(await page.evaluate(()=>cur().status),'draft');
-  await page.evaluate(()=>{const a=cur();a.org.prior=0;a.lines=[mkLine('event','e','Misc stuff','Event: Other',100)];submitBudget();});assert.equal(await page.evaluate(()=>cur().status),'draft');
+  assert.equal(await page.evaluate(()=>cur().status),'denied');
+  await page.evaluate(()=>{const a=cur();a.status='draft';a.asg=null;a.lines=[mkLine('event','e','Workshop catering','Event: Food',100)];a.org.prior=5000;submitBudget();});assert.equal(await page.evaluate(()=>cur().status),'denied');
+  await page.evaluate(()=>{const a=cur();a.status='draft';a.asg=null;a.org.prior=0;a.lines=[mkLine('event','e','Misc stuff','Event: Other',100)];submitBudget();});assert.equal(await page.evaluate(()=>cur().status),'denied');
   for(const width of [390,768,1440]){await page.setViewportSize({width,height:1000});const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth);if(overflow)console.log(await page.evaluate(()=>[...document.querySelectorAll('body *')].filter(el=>el.getBoundingClientRect().right>innerWidth+2).slice(0,12).map(el=>({tag:el.tagName,class:el.className,width:el.getBoundingClientRect().width}))));assert.equal(overflow,false,'Overflow at '+width);}
   await page.screenshot({path:'merged-budget-mobile.png',fullPage:true});assert.deepEqual(errors,[]);
   // All downstream source functions are byte-for-byte Jeff's attachment.

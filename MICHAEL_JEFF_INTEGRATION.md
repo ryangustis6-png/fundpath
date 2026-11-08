@@ -36,3 +36,9 @@ AP approval marks the card ready and notifies that organization to collect it at
 
 
 `demo-reset.test.cjs` verifies empty ASG/AP queues after restart, receipt-file deletion, no stale cards or approvals after reload, blocked stale asynchronous saves, and fresh ASG/AP approval before a new card becomes available.
+
+## Budget file intake
+
+The meeting page also offers an Excel (.xlsx/.xls), CSV or TSV upload, using the bundled spreadsheet reader locally. It recognizes the supplied ASG template and simple Item / Category / Amount tables. Template rows, amounts, categories and genuine event details are retained. Generic unknown categories, missing costs and negative amounts remain invalid; they are never silently dropped or converted into eligible purchases. Uploads keep the selected club and cannot change its tier, contacts or prior funding. A source organization mismatch blocks approval. Files are capped at 10 MB, 2,000 rows, 100 columns and 250 expenses. No spreadsheet formulae or embedded file instructions are executed.
+
+Voice and file routes now preserve requested amounts rather than automatically capping the costs or removing prohibited purchases. The draft remains unsubmitted and editable. Only the treasurer's Submit proposal to ASG action starts the final check. Passing all configured checks produces demo approval and a prepared authorization; failed or uncertain checks produce a denied proposal with reasons, no authorization, and a correction/resubmission route. This supersedes earlier automatic cap/exclusion behavior for new voice/file drafts. `budget-upload.test.cjs` covers CSV, the supplied ASG workbook, explicit submission, approval, over-limit and prohibited rejection for both input routes, and invalid-row persistence after reload.

@@ -1,0 +1,22 @@
+const fs=require('node:fs'),http=require('node:http'),path=require('node:path'),assert=require('node:assert/strict'),{chromium}=require('playwright');
+(async()=>{
+ const server=http.createServer((req,res)=>{const f=path.join(__dirname,req.url==='/'?'index.html':req.url.split('?')[0]);fs.readFile(f,(e,b)=>{if(e){res.writeHead(404);return res.end('{}');}res.setHeader('Content-Type',f.endsWith('.js')?'text/javascript':f.endsWith('.css')?'text/css':'text/html');res.end(b);});});await new Promise(r=>server.listen(4201,'127.0.0.1',r));let browser;
+ try{
+  browser=await chromium.launch({headless:true,channel:'msedge'});const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.route('https://**',r=>r.abort());await page.goto('http://127.0.0.1:4201');
+  const upload=async text=>{await page.getByRole('button',{name:'Upload budget file',exact:true}).click();await page.locator('#budget-file').setInputFiles({name:'budget.csv',mimeType:'text/csv',buffer:Buffer.from(text)});await page.waitForFunction(()=>!budgetImportBusy&&cur().source==='budget.csv');};
+  const reset=async()=>{await page.getByRole('button',{name:'Restart demo',exact:true}).click();await page.waitForFunction(()=>cur()?.status==='draft'&&!restartingDemo);};
+  assert.equal(await page.getByRole('button',{name:'Start meeting with ElevenLabs',exact:true}).count(),1);
+  await upload('Item,Category,Amount\nProjector,Capital Item,350');assert.equal(await page.evaluate(()=>cur().status),'draft');assert.equal(await page.evaluate(()=>cur().asg),null);
+  await page.screenshot({path:'uploaded-budget-draft.png',fullPage:true});await page.getByRole('button',{name:'Submit proposal to ASG',exact:true}).click();assert.equal(await page.evaluate(()=>cur().status),'approved');assert.equal(await page.evaluate(()=>cur().sa.total),350);
+  await reset();await upload('Item,Category,Amount\nProjector,Capital Item,6000');assert.equal(await page.evaluate(()=>cur().lines[0].amount),6000);
+  await page.getByRole('button',{name:'Submit proposal to ASG',exact:true}).click();assert.equal(await page.evaluate(()=>cur().status),'denied');assert.equal(await page.evaluate(()=>cur().sa),null);assert.match(await page.evaluate(()=>cur().asg.note),/over.*limit/i);
+  await reset();await upload('Item,Category,Amount\nUnknown,Unrecognized,100');await page.reload();assert.equal(await page.evaluate(()=>cur().lines.length),1);await page.getByRole('button',{name:'Create budget draft',exact:true}).count();await page.evaluate(()=>{UI.showAgent=false;render();});
+  await page.getByRole('button',{name:'Submit proposal to ASG',exact:true}).click();assert.equal(await page.evaluate(()=>cur().status),'denied');
+  await reset();await page.evaluate(()=>fillFromTranscript('Capital items projector $6000.'));assert.equal(await page.evaluate(()=>cur().lines[0].amount),6000);await page.getByRole('button',{name:'Submit proposal to ASG',exact:true}).click();assert.equal(await page.evaluate(()=>cur().status),'denied');
+  await reset();await page.evaluate(()=>fillFromTranscript('Capital items beer $100.'));assert.equal(await page.evaluate(()=>cur().lines.length),1);await page.getByRole('button',{name:'Submit proposal to ASG',exact:true}).click();assert.equal(await page.evaluate(()=>cur().status),'denied');
+  await reset();await page.getByLabel('Organization',{exact:true}).selectOption('personalFinance');await page.waitForFunction(()=>cur().presetClubKey==='personalFinance');
+  await page.getByRole('button',{name:'Upload budget file',exact:true}).click();await page.locator('#budget-file').setInputFiles('C:\\Users\\micha\\Downloads\\2026-27 ASG Club Funding Proposal #1 (1).xlsx');await page.waitForFunction(()=>!budgetImportBusy&&cur().source?.endsWith('.xlsx'));
+  assert.equal(await page.evaluate(()=>cur().lines.length),8);assert.equal(await page.evaluate(()=>totals(cur()).total),2645.95);await page.getByRole('button',{name:'Submit proposal to ASG',exact:true}).click();assert.equal(await page.evaluate(()=>cur().status),'approved');
+  assert.deepEqual(errors,[]);console.log('PASS: CSV and supplied ASG XLSX -> editable, unsubmitted draft -> treasurer permission -> compliant autoapproval; file/voice over-limit requests preserved and denied; prohibited and unknown categories denied; reload preserves invalid rows.');
+ }finally{if(browser)await browser.close();server.close();}
+})().then(()=>process.exit(0)).catch(e=>{console.error(e);process.exit(1)});
