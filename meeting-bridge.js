@@ -38,6 +38,7 @@ function consolidateMeetingExpenses(lines,events=[]){
   const identity=l=>(`${l.item} ${l.note||''}`.toLowerCase().match(/\b(projector|laptop|computer|tablet|monitor|printer|camera|microphone|chair|table|tent|banner|poster|flyer|subscription|software)s?\b/)||[])[1]||'';
   const context=l=>events.find(e=>e.id===l.eventId)?.name?.toLowerCase().trim()||l.eventId||'';
   for(const line of lines){
+    if(line.sourceSheetRow){result.push({...line});continue;}
     const noun=identity(line),separate=/\b(another|additional|second|third|separate|different)\b/i.test(line.item);
     const previous=!separate&&[...result].reverse().find(l=>l.category===line.category&&context(l)===context(line)&&(!noun||!identity(l)||identity(l)===noun));
     if(previous){
@@ -106,7 +107,7 @@ async function stopMeeting(){
 function prepareCompliantDraft(a){
   const adjustments=[];a.excludedLines=[];
   a.lines=a.lines.filter(l=>{
-    const category=spokenExpenseCategory(l.item)||spokenExpenseCategory(l.note||'');
+    const category=l.sourceSheetRow?l.category:spokenExpenseCategory(l.item)||spokenExpenseCategory(l.note||'');
     if(isMeetingEnd(l.item)||!category)return false;
     l.category=category;
     if(!isTravelExpense(l)){l.group='nonevent';l.eventId=null;}
@@ -136,6 +137,7 @@ fillFromTranscript=async function(text){
   const a=cur();if(!a||a.status!=='draft')return;
   await jeffFillFromTranscript(text);
   if(cur()!==a||UI.rec.state!=='done')return;
+  a.importedProposal=false;
   prepareCompliantDraft(a);a.meetingQuestions=UI.rec.questions||[];a.meetingAmountsConfirmed=false;UI.rec={state:'idle'};UI.showAgent=false;UI.manual=true;save(a,true);render();
 };
 const jeffValidate=validate;
@@ -151,10 +153,11 @@ validate=function(a){
   }
   // Capital items are exempt from the attachment's over-$1,000 quote gate.
   v.all=v.all.filter(x=>!(x.fix==='quote'&&a.lines.some(l=>l.id===x.line&&l.category==='Capital Item')));
+  v.all=v.all.filter(x=>!(x.sev==='review'&&x.src==='ASG committee criterion: itemized'&&a.lines.some(l=>l.id===x.line&&l.sourceSheetRow)));
   v.errors=v.all.filter(x=>x.sev==='error');v.reviews=v.all.filter(x=>x.sev==='review');
   // This preset demo skips officer setup; never invent president/advisor identities.
-  if(a.defaultMeetingProfile){
-    v.all=v.all.filter(x=>!x.club||/Treasurer|SA number/.test(x.msg));
+  if(a.defaultMeetingProfile||a.presetClubKey){
+    v.all=v.all.filter(x=>!x.club||/Treasurer name|SA number/.test(x.msg)||(/Treasurer email/.test(x.msg)&&!!a.org.treasurerEmail));
     v.errors=v.all.filter(x=>x.sev==='error');v.reviews=v.all.filter(x=>x.sev==='review');
   }
   const add=(msg)=>{const x={sev:'error',msg,src:S.tpl};v.all.push(x);v.errors.push(x);};
