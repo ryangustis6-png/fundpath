@@ -1,11 +1,18 @@
 /* Michael's live meeting intake; Jeff's downstream workflow stays in index.html. */
 let meetingSession=null,meetingConnecting=false,meetingEpoch=0,meetingError='';
 const meetingAgentId=DEFAULT_MEETING_AGENT_ID;
-const expenseWords=/\b(capital|equipment|projectors?|computers?|laptops?|tablets?|monitors?|printers?|cameras?|microphones?|speakers?|honorari\w*|fees?|hotels?|lodging|flights?|airfare|plane|gas|fuel|gallons?|transport\w*|vehicles?|rentals?|catering|food|pizza|meals?|dinner|lunch|breakfast|snacks?|supplies|materials|furniture|chairs?|tables?|tent|banners?|storage|subscriptions?|software|licenses?|marketing|advertis\w*|flyers?|posters?|printing|venue|facility|lanes?|dues|registration|entertainer|band|dj)\b/i;
+const spokenExpenseCategories=[
+  [/\bcapital(?:\s+(?:items?|purchases?|equipment))?\b/i,'Capital Item'],
+  [/\bflights?\b/i,'Trip: Flights'],[/\bgas\b/i,'Trip: Gas'],
+  [/\bhotels?\b/i,'Trip: Hotels'],[/\bspeaker\s+fees?\b/i,'Event: Guest Speaker'],
+  [/\bfood\b/i,'Event: Food'],[/\bmarketing\b/i,'Marketing'],
+  [/\badministrative\b/i,'Admin Item']
+];
+function spokenExpenseCategory(text){return spokenExpenseCategories.find(([pattern])=>pattern.test(text))?.[1]||null;}
 function isMeetingEnd(text){
   return /^(?:(?:awesome|okay|ok|great|thanks|thank you|fundpath|please|let's|lets|we can|can you|could you)[\s,.!—-]+)*(?:end|stop|finish|wrap up)\s+(?:(?:the|our|this)\s+)?meeting(?:\s+(?:now|please))?[\s,.!?]*$/i.test(String(text).trim());
 }
-function hasExpense(text){return !isMeetingEnd(text)&&expenseWords.test(text);}
+function hasExpense(text){return !isMeetingEnd(text)&&!!spokenExpenseCategory(text);}
 let meetingFinishing=false;
 async function finishMeetingAndBuild(){
   const a=cur();if(!a||a.status!=='draft'||meetingFinishing)return;
@@ -21,30 +28,32 @@ fromSentence=function(s,amounts,event){
   for(const l of [].concat(result))l.note=[l.note,s].filter(Boolean).join(' · ');
   return result;
 };
+// Only explicit expense categories can create a budget line. Conversation context
+// never becomes an event; event/trip headers must be deliberately stated.
 const jeffParseTranscript=parseTranscript;
 parseTranscript=function(text){
-  text=text.split(/\n+|(?<=[.!?])\s+/).filter(s=>!isMeetingEnd(s.replace(/^[A-Z][\w .'-]*(?:\([^)]*\))?:\s*/,''))).join('\n');
-  const parsed=jeffParseTranscript(text);if(parsed.lines.length)return parsed;
-  // Unstructured speech does not need Jeff's “Event one:” / “Non-event:” markers.
-  const sentences=text.split(/\n+|(?<=[.!?])\s+/).map(s=>s.trim()).filter(Boolean);
-  let event=null;
-  for(const sentence of sentences){
-    const date=sentence.match(/\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+\d{1,2}(?:,?\s+20\d{2})?/i);
-    if(/\b(event|workshop|conference|meeting|social|trip|travel)\b/i.test(sentence)&&(!event||date)){
-      event={id:uid(),type:/\b(trip|travel|conference)\b/i.test(sentence)?'Trip':'Event',name:sentence.replace(/\$[\d,.]+/g,'').slice(0,100),date:date?date[0]:'',people:0,nights:0,flightPeople:0,onHub:false};parsed.events.push(event);
+  const result={tier:null,prior:null,events:[],lines:[],questions:[]};let event=null;
+  const sentences=String(text).split(/\n+|(?<=[.!?])\s+/).flatMap(s=>s.split(/\s+(?:and|then)\s+(?=(?:capital|flights?|gas|hotels?|speaker\s+fees?|food|marketing|administrative)\b)/i));
+  for(let sentence of sentences){
+    sentence=sentence.replace(/^[A-Z][\w .'-]*\([^)]*\):\s*/, '').trim();
+    if(!sentence||isMeetingEnd(sentence))continue;
+    if(/^(?:event|trip)\b[^:]*:/i.test(sentence)){
+      const context=jeffParseTranscript(sentence);if(context.events.length){event=context.events[0];result.events.push(event);}
     }
+    const category=spokenExpenseCategory(sentence);if(!category)continue;
     const amounts=[...sentence.matchAll(/\$\s*([\d,]+(?:\.\d{1,2})?)|\b(\d+(?:\.\d{1,2})?)\s+dollars\b/gi)].map(m=>Number((m[1]||m[2]).replace(/,/g,'')));
-    if(!amounts.length||!hasExpense(sentence))continue;
-    if(amounts.length>1){parsed.questions=parsed.questions||[];parsed.questions.push('Confirm the itemization of: '+sentence);}
-    if(event){const l=fromSentence(sentence,amounts,event);parsed.lines.push(...[].concat(l));}
-    else{
-      const cat=/banner/i.test(sentence)?'Banners':/marketing|poster|flyer/i.test(sentence)?'Marketing':/storage/i.test(sentence)?'Storage':/equipment|capital|projector|computer|laptop|tablet|monitor|printer|camera|microphone|furniture|chair|table|tent/i.test(sentence)?'Capital Item':/\b(gas|fuel|gallon)/i.test(sentence)?'Trip: Gas':/hotel|lodging/i.test(sentence)?'Trip: Hotels':/flight|airfare|plane/i.test(sentence)?'Trip: Flights':/speaker|honorari/i.test(sentence)?'Event: Guest Speaker':/catering|food|meal|pizza|snack/i.test(sentence)?'Event: Food':'Admin Item';
-      parsed.lines.push(mkLine(/^(Trip|Event):/.test(cat)?'event':'nonevent',null,sentence.replace(/\$[\d,.]+/g,'').trim(),cat,amounts.at(-1),'',sentence));
-    }
+    if(!amounts.length)continue;
+    if(amounts.length>1){result.questions.push('Confirm the itemized amount for: '+sentence);}
+    const standalone=['Capital Item','Marketing','Admin Item'].includes(category);
+    const label=sentence.replace(/\$\s*[\d,.]+|\b\d+(?:\.\d{1,2})?\s+dollars\b/gi,'').replace(/\s+/g,' ').trim();
+    result.lines.push(mkLine(standalone?'nonevent':'event',standalone?null:event?.id||null,label,category,amounts.at(-1),'',sentence));
   }
-  return parsed;
+  // Do not keep a meeting/event heading with no actual event expenses.
+  result.events=result.events.filter(e=>result.lines.some(l=>l.eventId===e.id));
+  return result;
 };
 function meetingMessages(a){return a.meetingMessages||(a.meetingMessages=[]);}
+readBudget=async function(text){return {...parseTranscript(text),how:'FundPath category reader'};};
 function studentNotes(a){return meetingMessages(a).filter(m=>m.role==='user'&&!isMeetingEnd(m.text)).map(m=>m.text).join('\n');}
 function meetingCard(a){
   const rows=meetingMessages(a),busy=meetingConnecting||UI.rec.state==='reading';
@@ -80,7 +89,10 @@ async function stopMeeting(){
 function prepareCompliantDraft(a){
   const adjustments=[];a.excludedLines=[];
   a.lines=a.lines.filter(l=>{
-    if(isMeetingEnd(l.item)||!hasExpense(`${l.item} ${l.note||''}`))return false;
+    const category=spokenExpenseCategory(l.item)||spokenExpenseCategory(l.note||'');
+    if(isMeetingEnd(l.item)||!category)return false;
+    l.category=category;
+    if(['Capital Item','Marketing','Admin Item'].includes(category)){l.group='nonevent';l.eventId=null;}
     const text=`${l.item} ${l.vendor} ${l.note}`;
     if(PROHIBITED.test(text)||CLOTHING.test(text)){a.excludedLines.push({...l,reason:PROHIBITED.test(text)?'Prohibited purchase':'Requires a trademark / funding review'});return false;}
     return true;
@@ -99,6 +111,7 @@ function prepareCompliantDraft(a){
   cap('remaining tier funding',t.cap,()=>true);
   a.lines=a.lines.filter(l=>{if(+l.amount>0)return true;a.excludedLines.push({...l,reason:'No remaining allowance in this funding category'});return false;});
   a.budgetAdjustments=adjustments;
+  a.events=a.events.filter(e=>a.lines.some(l=>l.eventId===e.id));
 }
 const jeffFillFromTranscript=fillFromTranscript;
 fillFromTranscript=async function(text){
@@ -179,6 +192,10 @@ if(!bankingWorkspace){
   save(bankingWorkspace,true);
 }
 UI.role='org';UI.appId=bankingWorkspace.id;UI.stage=1;
+// Clean already-saved drafts too, so refreshing removes previous phantom events.
+if(bankingWorkspace.status==='draft'&&bankingWorkspace.lines.length){
+  prepareCompliantDraft(bankingWorkspace);save(bankingWorkspace,true);
+}
 UI.showAgent=bankingWorkspace.status==='draft';
 lsSet('fp.role',UI.role);lsSet('fp.app',UI.appId);lsSet('fp.stage',UI.stage);
 render();

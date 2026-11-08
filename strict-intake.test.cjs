@@ -1,0 +1,17 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const saved=new Map(),el={addEventListener(){},innerHTML:'',hidden:false};
+const ctx=vm.createContext({console,URL,Blob,Promise,setTimeout:()=>0,clearTimeout,setInterval,clearInterval,localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v)},document:{querySelector:()=>el,querySelectorAll:()=>[],addEventListener(){}},window:{addEventListener(){},scrollTo(){}},navigator:{}});
+const html=fs.readFileSync('index.html','utf8');
+vm.runInContext([...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]).join('\n').replace('render();detect();connectArtifact();',''),ctx);
+vm.runInContext('render=()=>{}',ctx);
+vm.runInContext(fs.readFileSync('public-config.js','utf8'),ctx);
+vm.runInContext(fs.readFileSync('meeting-bridge.js','utf8'),ctx);
+const parse=t=>JSON.parse(vm.runInContext(`JSON.stringify(parseTranscript(${JSON.stringify(t)}))`,ctx));
+const result=parse("Today's meeting is for the spring semester budget. Capital items: projector $350. Awesome end meeting.");
+assert.equal(result.lines.length,1);assert.equal(result.lines[0].category,'Capital Item');assert.deepEqual(result.events,[]);
+for(const text of ['Awesome end meeting $500','Today\'s meeting is for the spring semester budget.','We have $5000 total.','Equipment $100.','Venue rental $200.','Registration $100.','Storage $50.','Miscellaneous $100.'])assert.equal(parse(text).lines.length,0,text);
+for(const [word,cat] of [['capital items','Capital Item'],['flights','Trip: Flights'],['gas','Trip: Gas'],['hotels','Trip: Hotels'],['speaker fees','Event: Guest Speaker'],['food','Event: Food'],['marketing','Marketing'],['administrative','Admin Item']])assert.equal(parse(`${word} $100.`).lines[0].category,cat);
+assert.equal(parse('Capital items $350 and marketing $100.').lines.length,2);
+vm.runInContext(`cur().events=[{id:'phantom',type:'Event',name:"Today's meeting is for the spring semester budget.",date:''}];cur().lines=[mkLine('event','phantom','Capital items projector','Capital Item',350),mkLine('event','phantom','Awesome end meeting','Event: Other',100)];prepareCompliantDraft(cur());`,ctx);
+assert.equal(vm.runInContext('cur().lines.length',ctx),1);assert.equal(vm.runInContext('cur().events.length',ctx),0);assert.equal(vm.runInContext('validate(cur()).errors.length',ctx),0);
+console.log('PASS: eight explicit expense categories only; chatter/totals/unlisted purchases ignored; no phantom meeting events; existing draft cleaned; capital-only validation passes.');
