@@ -4,38 +4,22 @@ const CLUB_PROFILES={
   personalFinance:{name:'Personal Finance Club',tier:4,org:{...CLUB_PRELOADS.proposal.org,president:'Jeff Koch',treasurer:'Ninos Aneer',sa:'SA10384',prior:0}},
   pickleball:{name:'Pickleball Club',tier:4,org:{sa:'SA10314',treasurer:'Cole Fisher',president:'Cole Fisher',prior:0}}
 };
-function linkImportedProposalEvents(a){
-  const p=CLUB_PRELOADS.proposal;
-  for(const line of a.lines.filter(l=>l.sourceSheetRow&&requiresExpenseEvent(l))){
-    const source=p.events.find(e=>e.name===line.sourceEvent);if(!source)continue;
-    let event=a.events.find(e=>e.name===source.name);
-    if(!event){event={id:uid(),name:source.name,date:source.date,type:source.type,onHub:true,people:0,nights:0,flightPeople:0};a.events.push(event);}
-    line.group='event';line.eventId=event.id;
-  }
-}
-function seedPersonalFinanceProposal(a){
-  const p=CLUB_PRELOADS.proposal;
-  a.semester=p.semester;a.events=[];
-  a.lines=p.lines.map(row=>({...mkLine('nonevent',null,row.item,row.category,row.amount,'','Imported from your supplied funding proposal.'),sourceSheetRow:row.row,sourceEvent:row.sourceEvent||'',sourceComment:row.sourceComment}));
-  linkImportedProposalEvents(a);
-  a.source=p.fileName;a.importedProposal=true;a.proposalSourceTotal=p.total;
-  a.fileImportIssues=[];a.fileOrganization='';
-  // Importing a structured proposal must preserve every source row, including venue fees.
-  for(const l of a.lines)if(!NONEVENT_CATS.includes(l.category))NONEVENT_CATS.push(l.category);
-}
 function createClubRun(key){
   const p=CLUB_PROFILES[key],a=newApp(p.name,p.tier);a.presetClubKey=key;
   a.org={...a.org,...p.org};a.defaultMeetingProfile=key==='banking';
-  if(key==='personalFinance')seedPersonalFinanceProposal(a);
   save(a,true);return a;
 }
 function clubRun(key){return Object.values(Store.apps).find(a=>a.presetClubKey===key&&!a.archivedDemo)||null;}
 // Migrate the previously saved Banking Club run without resetting its progress.
 const previousBanking=Object.values(Store.apps).find(a=>a.defaultMeetingProfile&&!a.presetClubKey);
 if(previousBanking){previousBanking.presetClubKey='banking';save(previousBanking,true);}
+// Remove the old built-in Personal Finance draft, but keep user-uploaded budgets.
+for(const a of Object.values(Store.apps))if(a.presetClubKey==='personalFinance'&&a.importedProposal){
+  clearTimeout(pending[a.id]);delete pending[a.id];delete Store.apps[a.id];
+  if(Store.mode==='shared'&&Store.db)Store.db.collection('apps').doc(a.id).set({deleted:true,at:now()}).catch(()=>{});
+}
+lsSet('fp.apps',Store.apps);
 for(const key of Object.keys(CLUB_PROFILES))if(!clubRun(key))createClubRun(key);
-const savedFinance=clubRun('personalFinance');
-if(savedFinance?.lines.some(l=>l.sourceSheetRow)){linkImportedProposalEvents(savedFinance);save(savedFinance,true);}
 async function selectClub(key){
   if(!CLUB_PROFILES[key])return;
   if(meetingSession||meetingConnecting)await stopMeeting();
@@ -92,22 +76,8 @@ restartBankingDemo=async function(){
     await selectClub(CLUB_PROFILES[key]?key:'banking');
   }finally{restartingDemo=false;}
 };
-const meetingCardBeforeClubPresets=meetingCard;
-meetingCard=function(a){
-  let html=meetingCardBeforeClubPresets(a);
-  if(a.presetClubKey==='personalFinance'&&a.status==='draft'){
-    html=html.replace('<div class="row">',`<p>Your supplied proposal is ready: <b>${money(CLUB_PRELOADS.proposal.total)}</b> across ${CLUB_PRELOADS.proposal.lines.length} items.</p><div class="row"><button class="btn" data-club-action="review-proposal">Review saved funding proposal</button>`);
-  }
-  return html;
-};
 document.addEventListener('click',async e=>{
   const button=e.target.closest('[data-club-action]');if(!button||button.disabled)return;
-  if(button.dataset.clubAction==='review-proposal'){
-    const a=cur();if(a?.presetClubKey!=='personalFinance'||a.status!=='draft')return;
-    await stopMeeting();if(cur()!==a)return;
-    if(!a.importedProposal)seedPersonalFinanceProposal(a);
-    UI.showAgent=false;UI.stage=1;save(a);render();
-  }
   if(button.dataset.clubAction==='apply-receipt')await applyPreloadedReceipt(button.dataset.receipt);
 });
 const applyingPreloadedReceipts=new Set();

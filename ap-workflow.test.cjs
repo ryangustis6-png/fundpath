@@ -30,7 +30,7 @@ const fs=require('node:fs'),http=require('node:http'),path=require('node:path'),
   assert.equal(await page.evaluate(()=>apDecide(cur(),true,'')),false,'Treasurer cannot approve AP requests');
   // The same AP review and notification are available for another organization.
   await page.getByLabel('Organization',{exact:true}).selectOption('personalFinance');await page.waitForFunction(()=>cur().presetClubKey==='personalFinance');
-  await page.getByRole('button',{name:'Review saved funding proposal',exact:true}).click();await page.getByRole('button',{name:'Submit proposal to ASG',exact:true}).click();
+  await page.getByRole('button',{name:'Upload budget file',exact:true}).click();await page.locator('#budget-file').setInputFiles('C:\\Users\\micha\\Downloads\\2026-27 ASG Club Funding Proposal #1 (1).xlsx');await page.waitForFunction(()=>!budgetImportBusy&&cur().lines.length===8);await page.getByRole('button',{name:'Submit proposal to ASG',exact:true}).click();
   await page.locator('#role').selectOption('ap');await page.locator('.ap-request-list button').filter({hasText:'Personal Finance Club'}).click();
   await page.getByRole('button',{name:'Approve',exact:true}).click();assert.equal(await page.evaluate(()=>cur().card.loaded),2645.95);
   await page.getByLabel('Card last four digits (optional)',{exact:true}).fill('1234');await page.getByRole('button',{name:'Mark card picked up',exact:true}).click();

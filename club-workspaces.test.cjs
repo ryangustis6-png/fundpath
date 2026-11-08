@@ -12,8 +12,13 @@ const fs=require('node:fs'),http=require('node:http'),path=require('node:path'),
   await page.waitForFunction(()=>cur().presetClubKey==='personalFinance');
   assert.equal(await page.getByRole('button',{name:'Start meeting with ElevenLabs',exact:true}).count(),1);
   assert.equal(await page.evaluate(()=>cur().org.sa),'SA10384');assert.equal(await page.evaluate(()=>cur().org.treasurer),'Ninos Aneer');
-  assert.equal(await page.evaluate(()=>cur().lines.length),8);assert.equal(await page.evaluate(()=>totals(cur()).total),2645.95);
-  await page.getByRole('button',{name:'Review saved funding proposal',exact:true}).click();
+  assert.equal(await page.evaluate(()=>cur().lines.length),0);assert.equal(await page.evaluate(()=>stageState(cur())[1].st),'Not started');
+  assert.equal(await page.getByRole('button',{name:'Review saved funding proposal',exact:true}).count(),0);
+  await page.evaluate(()=>{const a=cur();a.importedProposal=true;a.lines=[mkLine('nonevent',null,'Old built-in proposal','Capital Item',500)];save(a,true);});await page.reload();
+  assert.equal(await page.evaluate(()=>cur().lines.length),0,'Old seeded proposal is removed on reload');
+  await page.getByRole('button',{name:'Upload budget file',exact:true}).click();await page.locator('#budget-file').setInputFiles('C:\\Users\\micha\\Downloads\\2026-27 ASG Club Funding Proposal #1 (1).xlsx');
+  await page.waitForFunction(()=>!budgetImportBusy&&cur().lines.length===8);
+  assert.equal(await page.evaluate(()=>totals(cur()).total),2645.95);
   assert.deepEqual(await page.evaluate(()=>validate(cur()).errors),[]);assert.deepEqual(await page.evaluate(()=>validate(cur()).reviews),[]);
   await page.screenshot({path:'personal-finance-proposal.png',fullPage:true});
   await page.getByRole('button',{name:'Submit proposal to ASG',exact:true}).click();
@@ -41,7 +46,7 @@ const fs=require('node:fs'),http=require('node:http'),path=require('node:path'),
   await page.getByLabel('Organization',{exact:true}).selectOption('personalFinance');await page.waitForFunction(()=>cur().presetClubKey==='personalFinance');
   assert.equal(await page.evaluate(()=>cur().status),'approved');assert.equal(await page.evaluate(()=>cur().receipts.length),0);
   await page.getByRole('button',{name:'Restart demo',exact:true}).click();await page.waitForFunction(()=>cur()?.status==='draft'&&!restartingDemo);
-  assert.equal(await page.evaluate(()=>cur().presetClubKey),'personalFinance');assert.equal(await page.evaluate(()=>cur().lines.length),8);
+  assert.equal(await page.evaluate(()=>cur().presetClubKey),'personalFinance');assert.equal(await page.evaluate(()=>cur().lines.length),0);
   assert.equal(await page.evaluate(()=>Object.keys(Store.apps).length),3);
   assert.equal(await page.evaluate(()=>Object.values(Store.apps).every(a=>a.status==='draft'&&!a.asg&&!a.sa&&a.card.status==='none'&&a.receipts.length===0)),true);
   assert.equal(await page.evaluate(()=>apRequests().length),0);
@@ -52,7 +57,7 @@ const fs=require('node:fs'),http=require('node:http'),path=require('node:path'),
   await standalone.goto(require('node:url').pathToFileURL(path.join(root,'..','FundPath - Michael + Jeff.html')).href);
   assert.equal(await standalone.locator('#organization-switcher option').count(),3);
   await standalone.getByLabel('Organization',{exact:true}).selectOption('personalFinance');await standalone.waitForFunction(()=>cur().presetClubKey==='personalFinance');
-  assert.equal(await standalone.evaluate(()=>totals(cur()).total),2645.95);
+  assert.equal(await standalone.evaluate(()=>totals(cur()).total),0);
   assert.equal(await standalone.getByRole('button',{name:'Start meeting with ElevenLabs',exact:true}).count(),1);
   // Saved/shared HTML may include controls that were already rendered before loading.
   await standalone.evaluate(()=>{
