@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "test": "node workflow.test.cjs && node integrations.test.cjs && node free-quotes.test.cjs",
-    "test:browser": "node browser.test.cjs"
+    "test:browser": "node meeting-bridge.test.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

@@ -1,0 +1,1113 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>FundPath</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one column, max 1080px. "Where everything stands" path runs left to right under the header; each stage shows one main task and one primary button. */
+:root{
+  --bg:#f6f5f3; --card:#ffffff; --soft:#f1efec; --ink:#1b1718; --muted:#635b5c; --line:#e3dedb;
+  --red:#c3142d; --red-ink:#ffffff; --red-soft:#fbe8ea;
+  --ok:#17784a; --ok-soft:#e2f3e9; --warn:#995500; --warn-soft:#fcf0dc; --bad:#b42318; --bad-soft:#fde8e6; --info:#245f96; --info-soft:#e5eff9;
+  --font:"Plus Jakarta Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:14px; --shadow:0 1px 2px rgba(40,20,20,.05),0 6px 20px rgba(40,20,20,.05);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#131011; --card:#1d191a; --soft:#262122; --ink:#f4efee; --muted:#b0a6a7; --line:#383031;
+  --red:#ef4b62; --red-ink:#ffffff; --red-soft:#3b1a20;
+  --ok:#5fcb93; --ok-soft:#173225; --warn:#e8a94f; --warn-soft:#3a2b14; --bad:#f4796e; --bad-soft:#3e1b18; --info:#8bbbe8; --info-soft:#172739;
+  --shadow:none; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#131011; --card:#1d191a; --soft:#262122; --ink:#f4efee; --muted:#b0a6a7; --line:#383031;
+  --red:#ef4b62; --red-ink:#ffffff; --red-soft:#3b1a20;
+  --ok:#5fcb93; --ok-soft:#173225; --warn:#e8a94f; --warn-soft:#3a2b14; --bad:#f4796e; --bad-soft:#3e1b18; --info:#8bbbe8; --info-soft:#172739;
+  --shadow:none; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{font-size:17px}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:1rem;line-height:1.55;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--card)}
+h1,h2,h3{margin:0;line-height:1.2;text-wrap:balance;font-weight:800;letter-spacing:-.01em}
+h1{font-size:2rem} h2{font-size:1.6rem} h3{font-size:1.15rem;font-weight:700}
+p{margin:0}
+a{color:var(--red)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid color-mix(in srgb,var(--red) 55%,transparent);outline-offset:2px}
+.muted{color:var(--muted)} .small{font-size:.88rem} .num{font-variant-numeric:tabular-nums} .mono{font-family:var(--mono);font-size:.85em}
+.stack{display:flex;flex-direction:column;gap:16px} .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center} .between{justify-content:space-between}
+.gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--card);border-bottom:1px solid var(--line)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding-block:12px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.3rem;margin-right:auto;letter-spacing:-.02em}
+.logo svg{flex:none}
+.chip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--soft);border-radius:999px;padding:7px 14px;font-weight:600;font-size:.92rem;cursor:pointer}
+.role{width:auto;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:7px 12px;font-weight:600;font-size:.92rem}
+.ask{background:var(--ink);color:var(--bg);border:0;border-radius:999px;padding:9px 16px;font-weight:700;cursor:pointer;display:inline-flex;gap:8px;align-items:center}
+
+/* path */
+.pathwrap{background:var(--card);border-bottom:1px solid var(--line)}
+.path{max-width:1180px;margin:0 auto;display:flex;gap:0;padding-block:16px 18px;overflow-x:auto}
+.node{flex:1 1 0;min-width:150px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;position:relative;background:none;border:0;text-align:left;cursor:pointer;padding:0 12px 0 0}
+.node::after{content:"";position:absolute;top:17px;left:42px;right:8px;height:3px;border-radius:2px;background:var(--line)}
+.node:last-child::after{display:none}
+.node.done::after{background:var(--ok)}
+.dot{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:800;border:2px solid var(--line);background:var(--card);color:var(--muted);position:relative;z-index:1}
+.node.done .dot{background:var(--ok);border-color:var(--ok);color:#fff}
+.node.wait .dot{border-color:var(--warn);color:var(--warn)}
+.node.cur .dot{background:var(--red);border-color:var(--red);color:var(--red-ink);box-shadow:0 0 0 5px var(--red-soft)}
+.node .lbl{font-weight:700;font-size:.98rem;line-height:1.2}
+.node .st{font-size:.82rem;color:var(--muted);line-height:1.25}
+.node.cur .lbl{color:var(--red)}
+
+.wrap{max-width:1080px;margin:0 auto;padding-block:28px 140px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:24px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:18px;min-width:0}
+.card.tight{padding:18px}
+.head{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:flex-end;justify-content:space-between}
+.sub{font-size:1.05rem;color:var(--muted);max-width:62ch}
+
+/* buttons */
+.btn{border:1.5px solid var(--line);background:var(--card);border-radius:12px;padding:11px 18px;font-weight:700;cursor:pointer;display:inline-flex;gap:8px;align-items:center;justify-content:center;font-size:1rem;text-decoration:none;color:var(--ink)}
+.btn:hover{border-color:var(--muted)}
+.btn.go{background:var(--red);border-color:var(--red);color:var(--red-ink)}
+.btn.go:hover{filter:brightness(1.06)}
+.btn.big{padding:16px 26px;font-size:1.1rem;border-radius:14px}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn.bad{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 50%,var(--line))}
+.btn.sm{padding:6px 12px;font-size:.88rem;border-radius:10px}
+.btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+.link{background:none;border:0;color:var(--red);font-weight:700;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:3px}
+.x{background:none;border:0;color:var(--muted);cursor:pointer;font-size:1.2rem;line-height:1;padding:6px 8px;border-radius:8px}
+.x:hover{background:var(--soft);color:var(--bad)}
+
+/* fields */
+label.f{display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:.9rem;color:var(--muted);min-width:0}
+input[type=text],input[type=number],input[type=date],input[type=email],select,textarea{width:100%;min-width:0;background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;font-size:1rem;color:var(--ink)}
+input:focus,select:focus,textarea:focus{border-color:var(--red);outline:none}
+textarea{resize:vertical;min-height:120px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.toggle{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:.92rem;cursor:pointer;user-select:none}
+.toggle input{width:20px;height:20px;accent-color:var(--ok)}
+
+/* agent card */
+.agent{border:2px dashed color-mix(in srgb,var(--red) 35%,var(--line));background:linear-gradient(180deg,var(--red-soft),var(--card) 70%);border-radius:18px;padding:28px;display:flex;flex-direction:column;gap:20px}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:760px){.tiles{grid-template-columns:minmax(0,1fr)}}
+.tile{display:flex;flex-direction:column;gap:10px;align-items:flex-start;text-align:left;background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:20px;cursor:pointer;min-width:0}
+.tile:hover{border-color:var(--red);box-shadow:0 0 0 3px var(--red-soft)}
+.tile.primary{border-color:var(--red)}
+.tile .ic{width:48px;height:48px;border-radius:12px;display:grid;place-items:center;background:var(--red-soft);color:var(--red)}
+.tile b{font-size:1.1rem}
+.tile span{color:var(--muted);font-size:.92rem}
+
+/* mini steps inside recording */
+.mini{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-weight:700}
+.mini span{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+.mini span.on{color:var(--red)} .mini span.ok{color:var(--ok)}
+.mini i{font-style:normal;color:var(--line)}
+.rec{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.recbtn{width:84px;height:84px;border-radius:50%;border:0;background:var(--red);color:#fff;display:grid;place-items:center;cursor:pointer;box-shadow:0 0 0 0 rgba(195,20,45,.45);animation:pulse 1.6s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(195,20,45,.45)}70%{box-shadow:0 0 0 18px rgba(195,20,45,0)}100%{box-shadow:0 0 0 0 rgba(195,20,45,0)}}
+.timer{font-size:2rem;font-weight:800;font-variant-numeric:tabular-nums}
+.spin{width:22px;height:22px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--red);animation:sp 0.8s linear infinite;flex:none}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.recbtn,.spin{animation:none}}
+.script{display:flex;flex-direction:column;gap:6px;max-height:360px;overflow:auto;padding:4px}
+.utt{display:grid;grid-template-columns:40px 1fr;gap:12px;padding:10px;border-radius:12px;transition:opacity .3s}
+.utt.on{background:var(--red-soft)}
+.utt.later{opacity:.35}
+.av{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800}
+.who{font-size:.82rem;color:var(--muted);font-weight:700}
+
+/* budget */
+.total{display:flex;flex-direction:column;gap:8px}
+.bar{height:12px;border-radius:6px;background:var(--soft);overflow:hidden;border:1px solid var(--line)}
+.bar i{display:block;height:100%;background:var(--ok);border-radius:6px}
+.bar i.over{background:var(--bad)} .bar i.near{background:var(--warn)}
+.big{font-size:1.6rem;font-weight:800;font-variant-numeric:tabular-nums}
+.ev{border:1.5px solid var(--line);border-radius:16px;overflow:hidden;background:var(--card)}
+.ev-h{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;padding:14px 16px;background:var(--soft);border-bottom:1px solid var(--line)}
+.ev-h input[type=text]{background:var(--card)}
+.ev-h .name{flex:2 1 220px;font-weight:700}
+.ev-h .date{flex:1 1 150px}
+.ev-h .tiny{width:84px;flex:none}
+.tag{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;font-size:.8rem;font-weight:800;letter-spacing:.02em}
+.tag.event{background:var(--info-soft);color:var(--info)} .tag.trip{background:var(--warn-soft);color:var(--warn)} .tag.ne{background:var(--soft);color:var(--muted);border:1px solid var(--line)}
+.ln{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(0,1.6fr) 120px minmax(0,1.2fr) auto auto;gap:10px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line)}
+.ln:last-of-type{border-bottom:0}
+@media (max-width:820px){.ln{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.ln .amt{grid-column:auto}}
+.ln .why{grid-column:1/-1;font-size:.88rem;margin-top:-4px}
+.addln{padding:10px 16px}
+.flag{display:flex;gap:8px;align-items:flex-start;font-size:.9rem;font-weight:600}
+.flag.error{color:var(--bad)} .flag.review{color:var(--warn)} .flag.info{color:var(--info)}
+.flag .src{font-weight:500;color:var(--muted)}
+details.more{border:1.5px solid var(--line);border-radius:14px;padding:14px 18px;background:var(--card)}
+details.more summary{cursor:pointer;font-weight:700}
+details.more[open] summary{margin-bottom:14px}
+
+/* sticky action bar */
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:8;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -6px 20px rgba(0,0,0,.05)}
+.dock-in{max-width:1080px;margin:0 auto;display:flex;align-items:center;gap:12px 20px;flex-wrap:wrap;justify-content:space-between;padding-block:14px}
+.dock .msg{font-weight:700;display:flex;align-items:center;gap:10px}
+
+/* status blocks */
+.hero{display:flex;gap:18px;align-items:flex-start;padding:22px;border-radius:16px}
+.hero .ic{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;flex:none;color:#fff;font-weight:800;font-size:1.4rem}
+.hero.ok{background:var(--ok-soft)} .hero.ok .ic{background:var(--ok)}
+.hero.wait{background:var(--warn-soft)} .hero.wait .ic{background:var(--warn)}
+.hero.bad{background:var(--bad-soft)} .hero.bad .ic{background:var(--bad)}
+.hero.info{background:var(--info-soft)} .hero.info .ic{background:var(--info)}
+.hero h2{font-size:1.4rem}
+.flow{display:flex;gap:0;overflow-x:auto;padding:4px 0}
+.fs{flex:1 1 0;min-width:130px;display:flex;flex-direction:column;gap:6px;position:relative;padding-right:10px}
+.fs::after{content:"";position:absolute;top:13px;left:32px;right:4px;height:3px;background:var(--line);border-radius:2px}
+.fs:last-child::after{display:none}
+.fs.done::after{background:var(--ok)}
+.fs .d{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--line);background:var(--card);font-weight:800;font-size:.8rem;color:var(--muted);z-index:1}
+.fs.done .d{background:var(--ok);border-color:var(--ok);color:#fff}
+.fs.cur .d{border-color:var(--red);color:var(--red)}
+.fs b{font-size:.92rem} .fs span{font-size:.8rem;color:var(--muted)}
+
+table{border-collapse:collapse;width:100%}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+th{text-align:left;font-size:.8rem;font-weight:700;color:var(--muted);padding:10px 12px;background:var(--soft);border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle;font-size:.95rem}
+tr:last-child td{border-bottom:0}
+.r{text-align:right}
+td input,td select{padding:7px 9px;font-size:.92rem}
+
+.pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:.8rem;font-weight:700;white-space:nowrap}
+.p-ok{background:var(--ok-soft);color:var(--ok)} .p-warn{background:var(--warn-soft);color:var(--warn)} .p-bad{background:var(--bad-soft);color:var(--bad)} .p-info{background:var(--info-soft);color:var(--info)} .p-mute{background:var(--soft);color:var(--muted)} .p-red{background:var(--red-soft);color:var(--red)}
+
+/* receipts */
+.drop{border:2px dashed var(--line);border-radius:16px;padding:28px;display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center;background:var(--card);cursor:pointer}
+.drop.over{border-color:var(--red);background:var(--red-soft)}
+.rc{border:1.5px solid var(--line);border-radius:16px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;background:var(--card)}
+.rc.bad{border-color:color-mix(in srgb,var(--bad) 45%,var(--line))}
+.rc-top{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.fname{font-family:var(--mono);font-size:.88rem;background:var(--soft);padding:6px 10px;border-radius:8px;word-break:break-word}
+.cats{display:flex;flex-wrap:wrap;gap:8px}
+.cat{border:1.5px solid var(--line);background:var(--card);border-radius:999px;padding:7px 14px;font-weight:700;font-size:.9rem;cursor:pointer}
+.cat[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.cat small{font-weight:500;opacity:.75}
+.rc-f{display:grid;grid-template-columns:150px minmax(0,1.6fr) 130px 110px;gap:10px}
+@media (max-width:760px){.rc-f{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.sumtbl td:first-child{font-weight:700}
+
+/* queues */
+.q2{display:grid;grid-template-columns:300px minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:900px){.q2{grid-template-columns:minmax(0,1fr)}}
+.qlist{display:flex;flex-direction:column;gap:10px}
+.qi{display:flex;flex-direction:column;gap:6px;text-align:left;border:1.5px solid var(--line);background:var(--card);border-radius:14px;padding:14px;cursor:pointer}
+.qi[aria-current="true"]{border-color:var(--red);box-shadow:0 0 0 3px var(--red-soft)}
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:18px}
+.tab{background:none;border:0;padding:10px 16px;font-weight:700;cursor:pointer;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-1px}
+.tab[aria-selected="true"]{color:var(--ink);border-color:var(--red)}
+.empty{padding:36px 20px;text-align:center;color:var(--muted);border:2px dashed var(--line);border-radius:16px;display:flex;flex-direction:column;gap:8px;align-items:center}
+.checks{display:flex;flex-direction:column;gap:8px}
+.ck{display:grid;grid-template-columns:24px 1fr;gap:8px}
+.ck .m{font-weight:800} .ck.ok .m{color:var(--ok)} .ck.no .m{color:var(--bad)} .ck.na .m{color:var(--warn)}
+
+/* chat */
+.chat{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));width:min(420px,calc(100% - 32px));height:min(620px,calc(100% - 120px));background:var(--card);border:1px solid var(--line);border-radius:18px;z-index:20;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.18);overflow:hidden}
+.chat-h{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
+.msgs{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.m{max-width:88%;padding:10px 14px;border-radius:16px;white-space:pre-wrap;font-size:.96rem}
+.m.u{align-self:flex-end;background:var(--ink);color:var(--bg);border-bottom-right-radius:4px}
+.m.a{align-self:flex-start;background:var(--soft);border-bottom-left-radius:4px}
+.sugg{display:flex;flex-wrap:wrap;gap:8px}
+.sugg button{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 12px;font-size:.86rem;cursor:pointer;font-weight:600}
+.chat form{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:700;z-index:30;max-width:calc(100% - 32px)}
+.banner{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:14px 18px;border-radius:14px;background:var(--ok-soft);font-weight:600;margin-bottom:18px}
+.welcome{max-width:640px;margin:40px auto 0}
+.tiers{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:560px){.tiers{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tier{border:1.5px solid var(--line);background:var(--card);border-radius:14px;padding:14px;cursor:pointer;display:flex;flex-direction:column;gap:2px;text-align:left}
+.tier[aria-pressed="true"]{border-color:var(--red);box-shadow:0 0 0 3px var(--red-soft)}
+.tier b{font-size:1.05rem} .tier span{color:var(--muted);font-size:.88rem}
+.mode{font-size:.8rem;font-weight:700;display:inline-flex;gap:6px;align-items:center;color:var(--muted)}
+.mode i{width:8px;height:8px;border-radius:50%;background:var(--muted)} .mode i.on{background:var(--ok)}
+</style>
+
+<header class="top"><div class="top-in gut">
+  <div class="logo"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><circle cx="5" cy="22" r="4" fill="var(--red)"/><circle cx="15" cy="12" r="4" fill="var(--red)" opacity=".7"/><circle cx="25" cy="6" r="4" fill="var(--red)" opacity=".45"/><path d="M5 22 L15 12 L25 6" stroke="var(--red)" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>FundPath</div>
+  <button class="chip" id="club-chip" hidden></button>
+  <select class="role" id="role" aria-label="Viewing as"><option value="org">Treasurer view</option><option value="asg">ASG Funding view</option><option value="ap">Accounts Payable view</option></select>
+  <button class="ask" id="ask-open"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>Ask FundPath</button>
+</div></header>
+<div class="pathwrap" id="pathwrap" hidden><nav class="path gut" id="path" aria-label="Where everything stands"></nav></div>
+<main class="wrap gut" id="app"></main>
+<div class="dock" id="dock" hidden><div class="dock-in gut" id="dock-in"></div></div>
+<section class="chat" id="chat" hidden aria-label="Ask FundPath"></section>
+<div class="toast" id="toast" hidden></div>
+<input type="file" id="file-audio" accept="audio/*,video/webm,video/mp4" hidden>
+<input type="file" id="file-receipts" accept="application/pdf,image/*" multiple hidden>
+<input type="file" id="file-clubs" accept=".csv,text/csv,text/plain" hidden>
+
+<script>
+"use strict";
+/* ================= RULES (sourced) ================= */
+const TIERS={1:1000,2:2000,3:3000,4:5000}, FOOD_CAP={1:500,2:500,3:750,4:1000};
+const S={tpl:"ASG proposal template, Step 5",tpl1:"ASG proposal template, Step 1",hub:"ASG proposal template, Steps 1–2",pr:"Canvas: Purchase Restrictions",sa:"Canvas: Student Org Purchasing Card",rentals:"Canvas: Transportation",unv:"Not in our sources yet — confirm with ASG"};
+const EVENT_CATS=["Event: Food","Event: Guest Speaker","Event: Entertainer","Event: Space Fee","Event: Marketing","Event: Other","Trip: Food","Trip: Hotels","Trip: Gas","Trip: Flights","Trip: Other Travel"];
+const NONEVENT_CATS=["Capital Item","Admin Item","Marketing","Banners","Storage"];
+const CAT_NAMES={"Event: Food":"Food","Event: Guest Speaker":"Guest speaker","Event: Entertainer":"Entertainer","Event: Space Fee":"Venue / space","Event: Marketing":"Marketing","Event: Other":"Other","Trip: Food":"Trip food","Trip: Hotels":"Hotel","Trip: Gas":"Gas","Trip: Flights":"Flights","Trip: Other Travel":"Other travel","Capital Item":"Capital item (kept 1+ yr)","Admin Item":"Admin item","Marketing":"Marketing","Banners":"Banners","Storage":"Storage"};
+const SPEND={"SC0271":"Conference Registration Fees","SC0276":"Student Travel","SC0278":"Off Campus Lodging","SC0281":"Transportation","SC0282":"Student Hospitality (Food)","SC0309":"Supplies - Office (Event Supplies/Decorations)","SC0331":"Food Supplies (Food for Event)","SC0335":"Advertising","SC0336":"Dues and Membership","SC0337":"Printing and Copying","SC0346":"Facilitators, Instructors, Speakers","SC0373":"Car and Truck Rental","SC0399":"Facility (on-campus rental)","SC0497":"Events - Students","SC0509":"Transportation - Student","FUEL":"Car Fuel"};
+const CAT_MAP={"Event: Food":["SC0282",1],"Trip: Food":["SC0282",1],"Event: Guest Speaker":["SC0346",1],"Event: Entertainer":["SC0346",1],"Event: Space Fee":["SC0497",0],"Event: Marketing":["SC0335",1],"Event: Other":["SC0497",0],"Trip: Hotels":["SC0278",1],"Trip: Gas":["FUEL",1],"Trip: Flights":["SC0276",1],"Trip: Other Travel":["SC0281",1],"Capital Item":["SC0309",0],"Admin Item":["SC0309",0],"Marketing":["SC0335",1],"Banners":["SC0335",0],"Storage":["SC0497",0]};
+const PROHIBITED=/\b(alcohol|beer|wine|liquor|spirits|tobacco|cigar|vape|nicotine|gambl\w*|casino|lottery)\b/i;
+const CLOTHING=/\b(shirts?|t-shirts?|tees|hoodies?|jerseys?(?! mike)|apparel|hats|merch|sweatshirts?|quarter-zips?)\b/i;
+const VAGUE=/\b(misc\w*|various|stuff|general|etc|tbd)\b/i;
+/* receipt audit categories (treasurer's words) -> budget categories */
+const RCATS=[
+  {k:"food",label:"Food",hint:"catering, meals, snacks",file:"Food",budget:["Event: Food","Trip: Food"]},
+  {k:"speaker",label:"Guest speaker",hint:"fees, reimbursement, travel",file:"Guest Speaker",budget:["Event: Guest Speaker"]},
+  {k:"trip",label:"Trip",hint:"overnight, day trips, networking, hotels, flights",file:"Trip",budget:["Trip: Hotels","Trip: Gas","Trip: Flights","Trip: Other Travel"]},
+  {k:"event",label:"Venue & event",hint:"space, entertainment, marketing",file:"Event",budget:["Event: Space Fee","Event: Entertainer","Event: Marketing","Event: Other","Marketing","Banners"]},
+  {k:"admin",label:"Administrative",hint:"office supplies for the Armstrong office, subscriptions",file:"Admin",budget:["Admin Item","Storage"]},
+  {k:"capital",label:"Capital item",hint:"kept more than 1 year",file:"Capital Item",budget:["Capital Item"]}
+];
+const RC=Object.fromEntries(RCATS.map(c=>[c.k,c]));
+const TRIP_TYPES={hotel:"Hotel",flight:"Flight",gas:"Gas / rental",travel:"Other travel"};
+const POLICY=[
+  ["Tier caps","Per semester: Tier 1 $1,000 · Tier 2 $2,000 · Tier 3 $3,000 · Tier 4 $5,000, minus ASG funding already received this semester.",S.tpl],
+  ["Food cap","Event food + trip food: Tier 1–2 $500 · Tier 3 $750 · Tier 4 $1,000 per semester.",S.tpl],
+  ["Admin, storage, speakers","Admin items $1,000 · Storage $1,000 · Guest speakers $3,000, regardless of tier.",S.tpl],
+  ["Hotels and flights","Hotels up to $50 per person per night. Flights up to $300 per person round trip.",S.tpl],
+  ["Quotes","Quotes are required for hotels, flights and any item over $1,000.",S.tpl1],
+  ["Hub listing","Events and trips must be listed on Miami Central with names that exactly match.",S.hub],
+  ["Capital vs admin","Capital items are tangible goods kept more than a year. Admin items are operating costs and goods not kept more than a year.","ASG template"],
+  ["Prohibited purchases","No alcohol, tobacco, gambling, adult entertainment, illegal products, or anything conflicting with university policy or trademarks.",S.pr],
+  ["ASG worktags","ASG funds use Fund FD1000 / Program PRG040. Agency funds use FD9001 / PRG100.","Canvas: Student Org Accounts"],
+  ["Spend Authorization","Request card funds once per semester per account type. Never select Cash Advance. Attach budget proof. Never resubmit an approved one. None after June 1.",S.sa],
+  ["Card processing","Accounts Payable fulfills within 2–3 business days after advisor approval.",S.sa],
+  ["Receipts","After funds load, answer the Workday Receipts Questionnaire (who, what, when, where, how, why) for each transaction, then close the authorization.","Canvas: Submit Receipt"],
+  ["Rentals","Drivers 18–20 must use Hertz; 21+ may use Hertz or Enterprise. One card per rental vehicle.",S.rentals],
+  ["Contacts","ASG funding: asgfunding@miamioh.edu · Workday & balances: studentorgfin@miamioh.edu · Cards: Accounts Payable, 107 Roudebush Hall, AccountsPayable@miamioh.edu, (513) 529-9200","Canvas: Contacts"]
+];
+/* Clubs: starter list from our files. Import a Miami Central export (CSV) to load every registered org. Anyone can type a club that isn't listed. */
+const STARTER_CLUBS=["Personal Finance Club","Miami University Banking Club","Club Pickleball","Sigma Eta Pi","RedHawk Applied AI"];
+
+/* ================= UTIL ================= */
+const $=(s,el=document)=>el.querySelector(s), $$=(s,el=document)=>[...el.querySelectorAll(s)];
+const uid=()=>Math.random().toString(36).slice(2,9);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const cents=n=>Math.round((Number(n)||0)*100);
+const sum=a=>a.reduce((x,y)=>x+cents(y),0)/100;
+const money=(n,whole)=>{const v=Number(n)||0;return (v<0?"−":"")+"$"+Math.abs(v).toLocaleString("en-US",{minimumFractionDigits:whole?0:2,maximumFractionDigits:whole?0:2})};
+const now=()=>new Date().toISOString();
+const day=iso=>{try{return new Date(iso).toLocaleDateString([], {month:"short",day:"numeric"})}catch{return ""}};
+const clock=iso=>{try{return new Date(iso).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}catch{return ""}};
+function lsGet(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch{return d}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
+function toast(m){const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,2800)}
+const NUMW={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,fifteen:15,twenty:20};
+const toNum=w=>{if(w==null)return 0;const x=String(w).toLowerCase();return NUMW[x]??(parseFloat(x.replace(/[$,]/g,""))||0)};
+const ICON={
+  mic:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
+  up:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>',
+  play:'<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>',
+  stop:'<svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>',
+  file:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg>'
+};
+
+/* ================= BACKEND DETECTION ================= */
+const BE={api:false,stt:false,tts:false,ai:false,workday:"demo",agentId:null,claude:null};
+async function detect(){
+  try{
+    const ctl=new AbortController();setTimeout(()=>ctl.abort(),2500);
+    const r=await fetch("/api/health",{signal:ctl.signal});
+    if(r.ok){const h=await r.json();if(h&&h.ok){BE.api=true;BE.stt=!!h.elevenlabs?.stt;BE.tts=!!h.elevenlabs?.tts;BE.agentId=h.elevenlabs?.agentId||null;BE.ai=!!h.ai;BE.workday=h.workday==="live"?"live":"mock"}}
+  }catch{}
+  render();
+}
+
+/* ================= STORE ================= */
+const Store={mode:"local",apps:{},db:null};
+const UI={role:lsGet("fp.role","org"),appId:lsGet("fp.app",null),stage:lsGet("fp.stage",1),fill:null,rec:{state:"idle"},sampleAt:-1,manual:false,showFix:false,asgTab:"proposals",asgSel:null,auSel:null,apSel:null,chat:{open:false,msgs:[],busy:false},welcomeTier:4,welcomeClub:""};
+Store.apps=lsGet("fp.apps",{})||{};
+const pending={};
+function save(app,immediate){
+  app.updatedAt=now(); Store.apps[app.id]=app;
+  if(Store.mode==="shared"&&Store.db){
+    clearTimeout(pending[app.id]);
+    const go=()=>{delete pending[app.id];Store.db.collection("apps").doc(app.id).set({app:JSON.parse(JSON.stringify(app)),at:app.updatedAt}).catch(()=>{Store.mode="local";lsSet("fp.apps",Store.apps)})};
+    if(immediate)go();else pending[app.id]=setTimeout(go,500);
+  } else lsSet("fp.apps",Store.apps);
+}
+async function connectArtifact(){
+  if(!(window.claude&&typeof window.claude.use==="function"))return;
+  try{BE.claude=await window.claude.use("sample")}catch{BE.claude=null}
+  let db=null;try{db=await window.claude.use("db")}catch{}
+  if(!db){render();return}
+  Store.db=db;
+  db.collection("apps").onSnapshot(snap=>{
+    const next={};snap.docs.forEach(d=>{const v=d.data();if(v&&v.app)next[d.id]=v.app});
+    if(Store.mode!=="shared"){Store.mode="shared";for(const [id,a] of Object.entries(Store.apps))if(!next[id]){next[id]=a;db.collection("apps").doc(id).set({app:a,at:a.updatedAt||now()}).catch(()=>{})}}
+    for(const id of Object.keys(next))if(pending[id]&&Store.apps[id])next[id]=Store.apps[id];
+    Store.apps=next;
+    const a=document.activeElement;if(a&&/INPUT|TEXTAREA/.test(a.tagName)&&a.type!=="checkbox"&&a.type!=="file"){paintDock();return}
+    render();
+  },()=>{Store.mode="local"});
+}
+function clubs(){const extra=lsGet("fp.clubs",[]);return [...new Set([...STARTER_CLUBS,...extra,...Object.values(Store.apps).map(a=>a.club)])].filter(Boolean).sort((a,b)=>a.localeCompare(b))}
+
+/* ================= MODEL ================= */
+function newApp(club,tier){
+  const a={id:uid(),club,tier,semester:"Spring 2027",createdAt:now(),updatedAt:now(),
+    org:{email:"",president:"",presidentEmail:"",treasurer:"",treasurerEmail:"",advisor:"",sa:"",prior:0},
+    transcript:"",source:null,events:[],lines:[],status:"draft",asg:null,sa:null,card:{status:"none",loaded:0,last4:""},
+    receipts:[],audit:{status:"none"},notices:[],history:[]};
+  log(a,"Treasurer","Started "+a.semester+" application");return a;
+}
+const cur=()=>UI.appId&&Store.apps[UI.appId]||null;
+function log(a,who,t){a.history.push({at:now(),who,t})}
+function notify(a,to,t){a.notices.unshift({id:uid(),at:now(),to,t,read:false})}
+const evOf=(a,id)=>a.events.find(e=>e.id===id);
+function mkLine(group,eventId,item,category,amount,vendor,note){return {id:uid(),group,eventId,item,category,amount:Math.round(Number(amount)*100)/100,vendor:vendor||"",note:note||"",quote:""}}
+
+/* ================= BUDGET RULES ================= */
+function totals(a){
+  const L=a.lines,by=c=>sum(L.filter(l=>l.category===c).map(l=>l.amount));
+  const t={total:sum(L.map(l=>l.amount)),food:by("Event: Food")+by("Trip: Food"),admin:by("Admin Item"),storage:by("Storage"),speakers:by("Event: Guest Speaker"),hotels:by("Trip: Hotels"),flights:by("Trip: Flights")};
+  t.tierMax=TIERS[a.tier]||0;t.cap=Math.max(0,t.tierMax-(Number(a.org.prior)||0));t.foodCap=FOOD_CAP[a.tier]||0;
+  const trips=a.events.filter(e=>e.type==="Trip");
+  t.hotelCap=50*trips.reduce((x,e)=>x+(+e.people||0)*(+e.nights||0),0);t.flightCap=300*trips.reduce((x,e)=>x+(+e.flightPeople||0),0);
+  return t;
+}
+function validate(a){
+  const out=[],add=(sev,msg,src,x={})=>out.push({sev,msg,src,...x});const o=a.org,t=totals(a);
+  const need=[["treasurer","Treasurer name"],["president","President name"],["advisor","Advisor name"]];
+  need.forEach(([k,l])=>{if(!o[k])add("error",`${l} is missing.`,S.tpl1,{club:1})});
+  [["email","Club email"],["presidentEmail","President email"],["treasurerEmail","Treasurer email"]].forEach(([k,l])=>{if(!o[k])add("error",`${l} is missing.`,S.tpl1,{club:1});else if(!/@miamioh\.edu$/i.test(o[k].trim()))add("error",`${l} must end in @miamioh.edu.`,S.tpl1,{club:1})});
+  if(!/^SA1\d{4}$/.test((o.sa||"").trim()))add("error","SA number should look like SA1#### (your club's Workday worktag).",S.tpl1,{club:1});
+  if(!a.events.length)add("error","Add at least one event or trip.",S.hub);
+  for(const e of a.events){
+    if(!e.name||!e.date)add("error",`Give "${e.name||"this "+e.type.toLowerCase()}" a name and date.`,S.hub,{ev:e.id});
+    if(e.type==="Trip"&&!(+e.people>0))add("error",`How many people are going on "${e.name}"?`,S.hub,{ev:e.id});
+    if(!e.onHub)add("error",`"${e.name||"This event"}" needs to be listed on Miami Central. Flip the switch once it is.`,S.hub,{ev:e.id});
+  }
+  for(const l of a.lines){
+    if(!l.item||!(+l.amount>0))add("error","Each expense needs a description and an amount.",S.tpl1,{line:l.id});
+    const ev=evOf(a,l.eventId);
+    if(l.group==="event"&&ev&&(ev.type==="Trip")!==l.category.startsWith("Trip:"))add("error",`Pick a ${ev.type==="Trip"?"trip":"event"} category for this line.`,S.hub,{line:l.id});
+    if((l.category==="Trip: Hotels"||l.category==="Trip: Flights"||+l.amount>1000)&&!l.quote)add("error","Attach a quote (required for hotels, flights and items over $1,000).",S.tpl1,{line:l.id,fix:"quote"});
+    const txt=`${l.item} ${l.vendor} ${l.note}`;
+    if(PROHIBITED.test(txt))add("error",`ASG can't fund ${txt.match(PROHIBITED)[0]}.`,S.pr,{line:l.id});
+    if(CLOTHING.test(txt))add("review","Clothing needs a trademark check and may not be fundable.",S.sa,{line:l.id});
+    if(VAGUE.test(l.item||""))add("review","This reads like a lump sum. Break it into specific expenses.","ASG committee criterion: itemized",{line:l.id});
+  }
+  if(t.cap&&t.total>t.cap)add("error",`You're ${money(t.total-t.cap)} over your Tier ${a.tier} limit of ${money(t.cap,1)}.`,S.tpl,{fix:"total"});
+  if(t.food>t.foodCap)add("error",`Food is ${money(t.food-t.foodCap)} over the Tier ${a.tier} food cap (${money(t.foodCap,1)}).`,S.tpl,{fix:"food"});
+  if(t.admin>1000)add("error","Admin items are over the $1,000 cap.",S.tpl);
+  if(t.storage>1000)add("error","Storage is over the $1,000 cap.",S.tpl);
+  if(t.speakers>3000)add("error","Guest speakers are over the $3,000 cap.",S.tpl);
+  if(t.hotels>t.hotelCap)add("error",`Hotels are ${money(t.hotels-t.hotelCap)} over the $50 per person per night limit.`,S.tpl,{fix:"hotel",line:(a.lines.find(l=>l.category==="Trip: Hotels")||{}).id});
+  if(t.flights>t.flightCap)add("error","Flights are over $300 per person.",S.tpl);
+  return {all:out,errors:out.filter(i=>i.sev==="error"),reviews:out.filter(i=>i.sev==="review"),t};
+}
+function autoFix(a,k){
+  const t=totals(a),scale=(f,pred)=>a.lines.filter(pred).forEach(l=>l.amount=Math.floor(+l.amount*f*100)/100);
+  if(k==="hotel")scale(t.hotelCap/t.hotels,l=>l.category==="Trip: Hotels");
+  if(k==="food")scale(t.foodCap/t.food,l=>/Food$/.test(l.category));
+  if(k==="total")scale(t.cap/t.total,()=>true);
+  log(a,"Treasurer","Applied a one-click fix: "+k);
+}
+
+/* ================= MEETING -> BUDGET ================= */
+const VOICE={Maya:"#8a1c2b",Jordan:"#245f96",Sam:"#17784a"};
+const SCRIPT=[
+  ["Maya","President","Okay, let's lock in our spring ASG proposal. We're Tier 4, so the max is $5,000, and ASG hasn't given us anything yet this semester."],
+  ["Jordan","Treasurer","Event one: General Body Meetings, every week from January 27 to April 28. Catering from Jersey Mike's, $600 for the semester."],
+  ["Sam","VP Events","Event two: the Spring Speaker Series from February 3 to April 21. Three speakers at a $400 honorarium each, so $1,200."],
+  ["Sam","VP Events","Event three: the Oxford Lanes Bowling Social on February 20. Lane rental is $200."],
+  ["Maya","President","Trip: the Midwest Finance Conference in Chicago, March 12 to March 14. Eight people, two nights. The hotel quoted $65 per person per night."],
+  ["Jordan","Treasurer","For the conference we drive two vehicles, 300 miles each way. Gas at $3.20 a gallon and 25 miles per gallon comes to $153.60."],
+  ["Jordan","Treasurer","Conference meals: $25 per person per day for two days, so $400."],
+  ["Sam","VP Events","Non-event: a Canva Teams subscription for one year, $250. That's an admin item."],
+  ["Sam","VP Events","Non-event: a custom retractable banner from Vivid Tables, $196."],
+  ["Maya","President","Non-event: a branded table cover we'll keep for years, $150. That's a capital item."],
+  ["Jordan","Treasurer","All three events and the trip are already listed on Miami Central with these exact names. Let's submit."]
+];
+const scriptText=()=>SCRIPT.map(([n,r,t])=>`${n} (${r}): ${t}`).join("\n");
+const MONTHS=/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/;
+function vendorOf(s){for(const m of s.matchAll(/from ([A-Z][\w'&]*(?: [A-Z][\w'&]*)*)/g))if(!MONTHS.test(m[1]))return m[1];return ""}
+function parseTranscript(text){
+  const res={tier:null,prior:null,events:[],lines:[]};let allHub=false,ev=null;
+  const rows=text.split(/\n+/).map(s=>s.replace(/^[A-Z][\w .'-]*\([^)]*\):\s*|^(?:Speaker \d+|[A-Z][\w'-]*):\s+/,"").trim()).filter(Boolean);
+  const dateRe=/\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.? (\d{1,2})(?:\s*(?:to|through|-|–)\s*(?:(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.? )?(\d{1,2}))?/;
+  const amts=s=>[...s.matchAll(/\$\s?([\d,]+(?:\.\d{1,2})?)/g)].map(m=>parseFloat(m[1].replace(/,/g,"")));
+  for(const row of rows){
+    const tm=row.match(/tier\s*(\d)/i);
+    if(tm&&!/^(event|trip|non-event)/i.test(row)){res.tier=+tm[1];if(/(haven't|hasn't|nothing|zero|no funding)/i.test(row))res.prior=0;continue}
+    if(/listed on (miami central|the hub)/i.test(row)){allHub=true;continue}
+    let m=row.match(/^(event|trip)\b[^:]*:\s*(.*)$/i);
+    if(m){
+      const type=/trip/i.test(m[1])?"Trip":"Event",rest=m[2].replace(/^the\s+/i,"");
+      const name=rest.split(/,| every | from | on | in (?=[A-Z])|\. /)[0].trim().replace(/\.$/,"");
+      const d=rest.match(dateRe);
+      ev={id:uid(),type,name,date:d?`${d[1]} ${d[2]}`+(d[4]?` – ${d[3]?d[3]+" ":""}${d[4]}`:""):"",people:0,nights:0,flightPeople:0,onHub:false};
+      if(type==="Trip"){const p=rest.match(/(\w+) (?:people|members|students)/i),n=rest.match(/(\w+) nights?/i);ev.people=toNum(p&&p[1]);ev.nights=toNum(n&&n[1])}
+      res.events.push(ev);
+      const h=rest.match(/\$([\d.]+) per person per night/i);
+      if(h){res.lines.push(mkLine("event",ev.id,"Hotel","Trip: Hotels",+h[1]*ev.people*ev.nights,"",`${money(h[1])} × ${ev.people} people × ${ev.nights} nights`));continue}
+      const a=amts(rest);if(a.length)res.lines.push(...[].concat(fromSentence(rest,a,ev)));continue;
+    }
+    m=row.match(/^non-event\b[^:]*:\s*(.*)$/i);
+    if(m){const rest=m[1],a=amts(rest);if(!a.length)continue;
+      let item=rest.split(/,/)[0].replace(/^(a|an|the)\s+/i,"").replace(/ from .*/,"").trim();item=item[0].toUpperCase()+item.slice(1);
+      let cat="Admin Item";if(/capital|keep (it )?for years|tent|table cover|equipment/i.test(rest))cat="Capital Item";else if(/banner/i.test(rest))cat="Banners";else if(/storage/i.test(rest))cat="Storage";else if(/flyer|marketing|poster/i.test(rest))cat="Marketing";
+      res.lines.push(mkLine("nonevent",null,item,cat,a[a.length-1],vendorOf(rest),""));continue}
+    const a=amts(row);if(a.length&&ev)res.lines.push(...[].concat(fromSentence(row,a,ev)));
+  }
+  if(allHub)res.events.forEach(e=>e.onHub=true);
+  return res;
+}
+function fromSentence(s,a,ev){
+  const trip=ev.type==="Trip";let cat,item;
+  if(/gas|fuel|gallon/i.test(s)){cat="Trip: Gas";item="Gas"}
+  else if(/flight|airfare|plane/i.test(s)){cat="Trip: Flights";item="Flights"}
+  else if(/hotel|lodging/i.test(s)){cat="Trip: Hotels";item="Hotel"}
+  else if(/cater|food|pizza|meal|dinner|lunch|breakfast|snack/i.test(s)){cat=trip?"Trip: Food":"Event: Food";item=trip?"Meals":"Catering"}
+  else if(/speaker|honorari/i.test(s)){cat="Event: Guest Speaker";item="Speaker honorarium"}
+  else if(/\bdj\b|band|entertain/i.test(s)){cat="Event: Entertainer";item="Entertainer"}
+  else if(/lane|room|venue|space|rental|facility/i.test(s)){cat=trip?"Trip: Other Travel":"Event: Space Fee";item=/lane/i.test(s)?"Lane rental":"Venue rental"}
+  else if(/flyer|poster|marketing/i.test(s)){cat="Event: Marketing";item="Marketing"}
+  else{cat=trip?"Trip: Other Travel":"Event: Other";item="Expense"}
+  const cnt=s.match(/(\w+) speakers? at (?:a )?\$([\d,]+)/i);
+  if(cnt&&toNum(cnt[1])>1){const n=toNum(cnt[1]),each=parseFloat(cnt[2].replace(/,/g,""));return Array.from({length:n},(_,k)=>mkLine("event",ev.id,`Speaker ${k+1} honorarium`,cat,each,"",`${n} speakers × ${money(each,1)}`))}
+  const gas=s.match(/(\w+) vehicles?, (\d+) miles/i);
+  return mkLine("event",ev.id,item,cat,a[a.length-1],vendorOf(s),gas?`${toNum(gas[1])} vehicles · ${gas[2]} miles each way`:"");
+}
+function normalizeAI(raw){
+  const keys={},events=(raw.events||[]).map(e=>{const id=uid();keys[e.key]=id;return {id,type:e.type==="Trip"?"Trip":"Event",name:String(e.name||""),date:String(e.date||""),people:+e.people||0,nights:+e.nights||0,flightPeople:+e.flightPeople||0,onHub:!!e.onHub}});
+  const ok=new Set([...EVENT_CATS,...NONEVENT_CATS]);
+  const lines=(raw.lines||[]).filter(l=>ok.has(l.category)&&+l.amount>0).map(l=>{const ne=NONEVENT_CATS.includes(l.category);return mkLine(ne?"nonevent":"event",ne?null:(keys[l.eventKey]||events[0]?.id||null),String(l.item||""),l.category,+l.amount,String(l.vendor||""),String(l.note||""))});
+  return {tier:raw.tier??null,prior:raw.prior??null,events,lines,questions:raw.questions||[]};
+}
+async function readBudget(transcript,club){
+  if(BE.ai){try{const r=await fetch("/api/extract",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({transcript,club})});if(r.ok){const n=normalizeAI(await r.json());if(n.lines.length)return {...n,how:"Claude"}}}catch{}}
+  if(BE.claude){try{const raw=await BE.claude.json(`Turn this Miami University student org budget conversation into an ASG proposal. Return ONLY JSON: {"tier":number|null,"prior":number|null,"events":[{"key":"e1","type":"Event"|"Trip","name":string,"date":string,"people":number,"nights":number,"flightPeople":number,"onHub":boolean}],"lines":[{"group":"event"|"nonevent","eventKey":string|null,"item":string,"category":string,"amount":number,"vendor":string,"note":string}]}
+Event categories: ${EVENT_CATS.join(", ")}. Non-event: ${NONEVENT_CATS.join(", ")}. Use the speakers' numbers exactly; do their arithmetic; never invent a cost. Split "three speakers at $400" into three lines. onHub true only if they say events are on Miami Central.
+Transcript:\n"""${transcript.slice(0,12000)}"""`,{modelTier:"default"});const n=normalizeAI(raw);if(n.lines.length)return {...n,how:"Claude"}}catch{}}
+  return {...parseTranscript(transcript),how:"FundPath's reader"};
+}
+async function fillFromTranscript(text){
+  const a=cur();a.transcript=text;UI.rec={state:"reading"};render();
+  const r=await readBudget(text,a.club);
+  if(!r.lines.length){UI.rec={state:"error",msg:"I couldn't find any dollar amounts in that conversation. Try again and say the costs out loud, or type the budget yourself."};render();return}
+  if(r.tier)a.tier=r.tier;if(r.prior!=null)a.org.prior=r.prior;
+  a.events=r.events;a.lines=r.lines;a.source=r.how;
+  log(a,"FundPath",`Filled the budget from your meeting: ${r.events.length} events/trips, ${r.lines.length} expenses (${r.how})`);
+  UI.rec={state:"done",n:r.lines.length,e:r.events.length,questions:r.questions||[]};UI.fill=null;save(a,true);render();
+  setTimeout(()=>{const el=$("#budget");if(el)el.scrollIntoView({behavior:"smooth",block:"start"})},80);
+}
+/* recording with the mic -> ElevenLabs Scribe */
+let media=null,chunks=[],recTimer=null;
+async function startRecording(){
+  UI.fill="record";
+  if(!navigator.mediaDevices||!window.MediaRecorder){UI.rec={state:"error",msg:"This browser can't record audio. Upload a recording or paste your notes instead."};render();return}
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    chunks=[];media=new MediaRecorder(stream);media.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+    media.onstop=()=>{stream.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:media.mimeType||"audio/webm"});transcribe(blob)};
+    media.start(1000);UI.rec={state:"recording",start:Date.now()};render();
+    recTimer=setInterval(()=>{const el=$("#rec-time");if(el)el.textContent=fmtSecs((Date.now()-UI.rec.start)/1000)},500);
+  }catch(e){UI.rec={state:"error",msg:BE.api?"FundPath needs microphone permission. Allow it in your browser's address bar, then try again.":"Recording works on the live FundPath site. This preview can't use the microphone — try the example meeting or paste notes."};render()}
+}
+function stopRecording(){clearInterval(recTimer);if(media&&media.state!=="inactive")media.stop()}
+const fmtSecs=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,"0")}`;
+async function transcribe(blob){
+  UI.rec={state:"transcribing"};render();
+  if(!BE.stt){UI.rec={state:"error",msg:BE.api?"Transcription is off: add your ElevenLabs API key to the FundPath server (ELEVENLABS_API_KEY).":"Transcription runs on the live FundPath site with ElevenLabs. In this preview, use the example meeting or paste notes."};render();return}
+  try{
+    const r=await fetch("/api/transcribe",{method:"POST",headers:{"content-type":blob.type||"audio/webm"},body:blob});
+    const d=await r.json();if(!r.ok)throw new Error(d.message||"Transcription failed");
+    if(!(d.transcript||d.text||"").trim())throw new Error("The recording was silent.");
+    await fillFromTranscript(d.transcript||d.text);
+  }catch(e){UI.rec={state:"error",msg:`${e.message} You can try again or paste your notes.`};render()}
+}
+/* example meeting with ElevenLabs voices */
+let sampleAudio=null,sampleStop=false;
+async function playSample(){
+  UI.fill="sample";UI.sampleAt=0;sampleStop=false;UI.rec={state:"playing"};render();
+  const cache={};const get=i=>{if(!BE.tts||i>=SCRIPT.length)return null;if(!cache[i])cache[i]=fetch("/api/tts",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({text:SCRIPT[i][2],speaker:SCRIPT[i][0]})}).then(r=>r.ok?r.blob():null).catch(()=>null);return cache[i]};
+  for(let i=0;i<SCRIPT.length;i++){
+    if(sampleStop)return;
+    UI.sampleAt=i;paintScript();get(i+1);
+    const blob=await get(i);
+    if(blob){await new Promise(res=>{sampleAudio=new Audio(URL.createObjectURL(blob));sampleAudio.onended=res;sampleAudio.onerror=res;sampleAudio.play().catch(res)})}
+    else await new Promise(r=>setTimeout(r,1500));
+  }
+  if(!sampleStop){UI.sampleAt=SCRIPT.length;await fillFromTranscript(scriptText())}
+}
+function skipSample(){sampleStop=true;try{sampleAudio&&sampleAudio.pause()}catch{}UI.sampleAt=SCRIPT.length;fillFromTranscript(scriptText())}
+function paintScript(){$$(".utt").forEach((el,i)=>{el.classList.toggle("on",i===UI.sampleAt);el.classList.toggle("later",i>UI.sampleAt)});const on=$(".utt.on");if(on){const box=on.parentElement;box.scrollTop=on.offsetTop-box.offsetTop-30}}
+
+/* ================= WORKFLOW ================= */
+function submitBudget(){
+  const a=cur(),v=validate(a);if(v.errors.length){UI.showFix=true;render();return}
+  a.submittedAt=now();
+  if(!v.reviews.length){
+    a.asg={decision:"auto",who:"Automatic check",note:"Every line passed ASG's limits and required fields, so it was approved the moment you submitted. The Funding Committee can audit any automatic approval.",approved:Object.fromEntries(a.lines.map(l=>[l.id,+l.amount])),reasons:{},at:now()};
+    a.status="approved";log(a,"ASG",`Approved automatically: ${money(totals(a).total)}`);notify(a,"org",`ASG approved ${money(totals(a).total)}. Next: send it to Workday.`);
+  } else {a.status="review";a.asg=null;log(a,"Treasurer","Submitted to ASG; flagged items go to the Secretary of Treasury");notify(a,"asg",`${a.club} submitted a budget with ${v.reviews.length} item(s) to review.`)}
+  UI.stage=2;lsSet("fp.stage",2);save(a,true);render();window.scrollTo({top:0,behavior:"smooth"});
+}
+function buildSA(a){
+  const g={};
+  for(const l of a.lines){const amt=+(a.asg?.approved?.[l.id]||0);if(amt<=0)continue;const [sc,sure]=CAT_MAP[l.category]||["SC0497",0];
+    const x=g[sc]||(g[sc]={id:uid(),sc,sure:!!sure,amount:0,items:[]});x.amount=Math.round((x.amount+amt)*100)/100;x.items.push(`${evOf(a,l.eventId)?evOf(a,l.eventId).name+": ":""}${l.item}${l.vendor?" ("+l.vendor+")":""}`)}
+  const lines=Object.values(g).map(x=>({id:x.id,sc:x.sc,sure:x.sure,amount:x.amount,memo:x.items.join("; ")})),total=sum(lines.map(l=>l.amount));
+  const vend=[...new Set(a.lines.map(l=>l.vendor).filter(Boolean))];
+  return {description:a.card.status==="picked"?"ADD FUNDS":"NEW CARD",start:"2027-01-20",end:"2027-05-08",saNumber:a.org.sa,cashAdvance:false,lines,total,
+    justification:`ASG-approved funding for ${a.club}, ${a.semester}, approved ${day(a.asg?.at)} for ${money(total)}. Events and trips: ${a.events.map(e=>`${e.name} (${e.date})`).join("; ")}. Expected vendors: ${vend.join(", ")||"see memo lines"}. No clothing with Miami name or logo. Approved ASG budget attached as proof of funds.`,
+    attachments:["Approved ASG budget (FundPath)"],workday:null};
+}
+async function sendToWorkday(){
+  const a=cur();if(!a.sa)a.sa=buildSA(a);UI.sending=true;render();
+  let res=null;
+  if(BE.api){try{const r=await fetch("/api/workday",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"createSpendAuthorization",spendAuthorization:a.sa})});const d=await r.json();if(!r.ok)throw new Error(d.message||"Workday didn't accept it");res=d}catch(e){UI.sending=false;toast(e.message);render();return}}
+  else res={mode:"demo",id:"SA-"+Date.now().toString(36).toUpperCase(),status:"Submitted",submittedAt:now()};
+  UI.sending=false;
+  a.sa.workday={id:res.id,mode:res.mode,status:res.status||"Submitted",at:res.submittedAt||now()};a.sa.submittedAt=now();a.sa.advisor="approved";
+  a.status="sa_submitted";log(a,"Treasurer",`Sent Spend Authorization ${res.id} to Workday (${res.mode==="live"?"live":"demo"}) for ${money(a.sa.total)}`);
+  log(a,"Advisor",`${a.org.advisor||"Advisor"} approved in Workday${res.mode==="live"?"":" (demo)"}`);
+  notify(a,"ap",`${a.club}: Spend Authorization ${res.id} for ${money(a.sa.total)} is ready for review.`);
+  save(a,true);render();
+}
+async function refreshWorkday(){
+  const a=cur();if(!a?.sa?.workday)return;
+  if(a.sa.workday.mode!=="live"){toast("Demo mode: Accounts Payable moves this along from their view.");return}
+  try{const r=await fetch(`/api/workday?action=status&id=${encodeURIComponent(a.sa.workday.id)}`);const d=await r.json();if(!r.ok)throw new Error(d.message);a.sa.workday.status=d.status||a.sa.workday.status;
+    if(/load|complete|approved/i.test(d.status||"")&&a.status==="sa_submitted"){a.status="card_ready";a.card={status:"ready",loaded:a.sa.total,last4:""};notify(a,"org","Your card is ready.")}
+    save(a,true);render();toast("Workday status: "+a.sa.workday.status)}catch(e){toast(e.message||"Couldn't reach Workday")}
+}
+function apChecks(a){
+  const sa=a.sa;if(!sa)return [];const appr=sum(Object.values(a.asg?.approved||{}));const txt=sa.lines.map(l=>l.memo).join(" ");
+  return [
+    {ok:cents(sa.total)<=cents(appr),t:`Total ${money(sa.total)} is within the ASG approval of ${money(appr)}`,f:`Total is over the ASG approval of ${money(appr)}`},
+    {ok:!sa.cashAdvance,t:"No cash advance",f:"Cash advance selected"},
+    {ok:true,t:"One accounting string: FD1000 / PRG040"},
+    {ok:sa.advisor==="approved",t:`Advisor ${a.org.advisor} approved`,f:"Advisor hasn't approved"},
+    {ok:new Date()<new Date(new Date().getMonth()>=6?new Date().getFullYear()+1:new Date().getFullYear(),5,1),t:"Before the June 1 cutoff",f:"After June 1"},
+    {ok:!PROHIBITED.test(txt),t:"Nothing prohibited in the memo lines",f:"A memo line mentions a prohibited item"},
+    {ok:sa.lines.every(l=>l.sure),t:"Spend categories all from the course list",f:"Some spend categories are FundPath's best guess",warn:1},
+    {ok:!sa.lines.some(l=>l.sc==="FUEL"),t:"No fuel lines",f:"Fuel: check whether this needs a separate RENTAL/GAS CARDS request",warn:1}
+  ];
+}
+function apDecide(a,ok,note){
+  if(ok){a.status="card_ready";a.card={status:"ready",loaded:a.sa.total,last4:""};if(a.sa.workday)a.sa.workday.status="Funds loaded";log(a,"Accounts Payable",`Approved and loaded ${money(a.sa.total)}`);notify(a,"org",`Your card is ready with ${money(a.sa.total)}. Pick it up at Accounts Payable, 107 Roudebush Hall.`)}
+  else{a.status="sa_returned";a.returned=note;a.sa=null;log(a,"Accounts Payable","Returned the Spend Authorization: "+note);notify(a,"org","Accounts Payable sent your Workday request back: "+note)}
+  save(a,true);render();
+}
+
+/* ================= RECEIPTS + AUDIT ================= */
+const FNAME=/^(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{2,4})\s+(.+?)\s*[-–]\s*\$\s*([\d,]+(?:\.\d{1,2})?)\s*(?:\(\s*\$?([\d.]+)\s*tip\s*\))?/i;
+const VEND_STOP=/\s+(guest|speaker|catering|invoice|receipt|restaurant|lunch|dinner|coffee|one-time|business|annual|subscription|hotel|flight|gas|trip|order|bill|office|supplies)\b/i;
+function guessCat(t){t=t.toLowerCase();
+  if(/speaker/.test(t))return "speaker";
+  if(/\b(hotel|flights?|airfare|airline|gas|fuel|uber|lyft|bus|charter|rental car|hertz|enterprise|conference|trip|parking)\b/.test(t))return "trip";
+  if(/cater|restaurant|lunch|dinner|coffee|pizza|food|snack|domino|jersey mike|chipotle/.test(t))return "food";
+  if(/subscription|canva|office|supplies|pens?|pencils?|paper|printing|staples/.test(t))return "admin";
+  if(/banner|tent|table cover|equipment/.test(t))return "capital";
+  if(/driver|venue|lanes|dj|space|room|flyer|poster/.test(t))return "event";
+  return "";
+}
+function parseReceiptName(name){
+  const base=name.replace(/\.(pdf|png|jpe?g|heic|webp|gif)$/i,"").trim();const m=base.match(FNAME);if(!m)return null;
+  let y=+m[3];if(y<100)y+=2000;const date=`${y}-${String(m[1]).padStart(2,"0")}-${String(m[2]).padStart(2,"0")}`;
+  const rest=m[4].trim();const vendor=(rest.split(VEND_STOP)[0]||rest).trim();
+  return {date,vendor,desc:rest,amount:parseFloat(m[5].replace(/,/g,"")),tip:m[6]?+m[6]:0,category:guessCat(rest)};
+}
+function stdName(r){
+  if(!r.date||!r.vendor||!(+r.amount>0))return "";
+  const [y,mo,d]=r.date.split("-");const c=RC[r.category];
+  const label=c?(r.category==="trip"&&r.tripType?`Trip ${TRIP_TYPES[r.tripType].split(" ")[0]}`:c.file):"";
+  return `${+mo}.${+d}.${String(y).slice(2)} ${r.vendor.trim()} ${label?label+" ":""}Invoice - $${(+r.amount).toFixed(2)}`;
+}
+/* files live in this browser (IndexedDB) */
+const FILES={db:null,
+  async open(){if(this.db)return this.db;return this.db=await new Promise((res,rej)=>{const q=indexedDB.open("fundpath",1);q.onupgradeneeded=()=>q.result.createObjectStore("files");q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})},
+  async put(id,file){try{const db=await this.open();await new Promise((res,rej)=>{const t=db.transaction("files","readwrite");t.objectStore("files").put({name:file.name,type:file.type,blob:file},id);t.oncomplete=res;t.onerror=()=>rej(t.error)});return true}catch{return false}},
+  async get(id){try{const db=await this.open();return await new Promise(res=>{const q=db.transaction("files").objectStore("files").get(id);q.onsuccess=()=>res(q.result||null);q.onerror=()=>res(null)})}catch{return null}}
+};
+async function addReceiptFiles(files){
+  const a=cur();let parsed=0;
+  for(const f of files){const p=parseReceiptName(f.name);const id=uid();const stored=await FILES.put(id,f);
+    a.receipts.push({id,fileName:f.name,hasFile:stored,date:p?.date||"",vendor:p?.vendor||"",desc:p?.desc||"",amount:p?.amount||"",tip:p?.tip||0,category:p?.category||"",tripType:"",people:"",nights:"",kept:false,asg:null});if(p)parsed++}
+  log(a,"Treasurer",`Added ${files.length} receipt file(s)`);save(a);render();
+  toast(parsed?`Read ${parsed} of ${files.length} file name(s) automatically`:`Added ${files.length} file(s). Fill in the details below.`);
+}
+const SAMPLE_FILES=["11.5.26 Kofenya Guest Speaker Lunch/Coffee - $14.35","11.4.26 Mac & Joes Restaurant Invoice - $136.53 ($30 tip)","10.21.26 Dominos Catering Invoice - $145.16","10.21.26 Designated Driver invoice - $191.66","10.14.26 Jersey Mike's Catering Invoice - $203.90","10.7.26 Bodega Catering Invoice - $178.39","10.2.26 Canva Business One-time Annual Subscription - $266.25"];
+function loadSampleReceipts(){const a=cur();for(const n of SAMPLE_FILES){const p=parseReceiptName(n);a.receipts.push({id:uid(),fileName:n+".pdf",hasFile:false,sample:true,...p,tripType:"",people:"",nights:"",kept:false,asg:null})}log(a,"Treasurer","Loaded the 7 sample receipts");save(a);render()}
+function approvedBy(a,rk){const ids=new Set(RC[rk].budget);return sum(a.lines.filter(l=>ids.has(l.category)).map(l=>a.asg?.approved?.[l.id]||0))}
+function receiptChecks(a,r){
+  const out=[],add=(sev,msg,src)=>out.push({sev,msg,src});
+  if(!r.date||!r.vendor||!(+r.amount>0))add("error","Add the date, vendor and amount.","");
+  if(!r.category)add("error","Pick a category.","");
+  if(!r.hasFile&&!r.sample)add("review","Attach the receipt file.","Canvas: Submit Receipt");
+  const txt=`${r.vendor} ${r.desc}`;
+  if(PROHIBITED.test(txt))add("error",`ASG funds can't pay for ${txt.match(PROHIBITED)[0]}.`,S.pr);
+  if(+r.tip>0)add("review",`Includes a ${money(r.tip)} tip. Our sources don't say if ASG covers tips; ASG decides in the audit.`,S.unv);
+  if(r.category==="trip"&&r.tripType==="hotel"){const pn=(+r.people||0)*(+r.nights||0);if(!pn)add("error","Hotel: how many people and nights?",S.tpl);else if(+r.amount/pn>50)add("error",`Hotel is ${money(+r.amount/pn)} per person per night; the limit is $50.`,S.tpl)}
+  if(r.category==="trip"&&r.tripType==="flight"){if(!(+r.people>0))add("error","Flight: how many people?",S.tpl);else if(+r.amount/+r.people>300)add("error",`Flight is ${money(+r.amount/+r.people)} per person; the limit is $300.`,S.tpl)}
+  if(r.category==="trip"&&!r.tripType)add("error","What kind of trip cost is it?","");
+  if(r.category==="capital"&&!r.kept)add("review","Confirm the club will keep this more than a year, or switch it to Administrative.","ASG template: capital vs admin");
+  if(r.date&&new Date(r.date)>new Date())add("review","The date is in the future.","");
+  return out;
+}
+function auditSummary(a){
+  return RCATS.map(c=>{const rs=a.receipts.filter(r=>r.category===c.k);const spent=sum(rs.map(r=>r.amount));const appr=approvedBy(a,c.k);
+    let cap=null;if(c.k==="food")cap=FOOD_CAP[a.tier];if(c.k==="speaker")cap=3000;if(c.k==="admin")cap=1000;
+    const flags=[];if(spent>appr+0.004)flags.push({sev:"error",msg:appr?`${money(spent-appr)} over what ASG approved for ${c.label.toLowerCase()}.`:`ASG didn't approve any ${c.label.toLowerCase()} spending.`});
+    if(cap!=null&&spent>cap)flags.push({sev:"error",msg:`Over the ${money(cap,1)} ${c.label.toLowerCase()} cap.`});
+    return {c,count:rs.length,spent,appr,cap,flags}}).filter(x=>x.count||x.appr);
+}
+function submitAudit(){
+  const a=cur();const bad=a.receipts.some(r=>receiptChecks(a,r).some(x=>x.sev==="error"));
+  if(!a.receipts.length){toast("Add your receipts first");return}if(bad){toast("Fix the red items on your receipts first");return}
+  a.audit={status:"submitted",at:now()};a.receipts.forEach(r=>r.asg=null);
+  log(a,"Treasurer",`Submitted ${a.receipts.length} receipts (${money(sum(a.receipts.map(r=>r.amount)))}) to ASG for audit`);notify(a,"asg",`${a.club} submitted ${a.receipts.length} receipts for audit.`);
+  save(a,true);render();window.scrollTo({top:0,behavior:"smooth"});
+}
+
+/* ================= RENDER ================= */
+function render(){
+  $("#role").value=UI.role;
+  const a=cur();
+  const chip=$("#club-chip");chip.hidden=!a||UI.role!=="org";if(a)chip.innerHTML=`${esc(a.club)} <span class="muted">· Tier ${a.tier}</span> <span aria-hidden="true">▾</span>`;
+  $("#pathwrap").hidden=!(a&&UI.role==="org");
+  if(UI.role==="org"){if(!a){$("#app").innerHTML=welcome();$("#dock").hidden=true;return}paintPath(a);$("#app").innerHTML=notice(a)+stage(a)}
+  else if(UI.role==="asg")$("#app").innerHTML=asgView();else $("#app").innerHTML=apView();
+  paintDock();paintChat();
+}
+function welcome(){
+  return `<div class="welcome stack">
+    <h1>Get your club funded.</h1>
+    <p class="sub">FundPath walks you from your budget meeting to a loaded card and a clean audit. One step at a time.</p>
+    <div class="card">
+      <label class="f" style="font-size:1rem;color:var(--ink)">Your club
+        <input type="text" id="w-club" list="club-list" value="${esc(UI.welcomeClub)}" placeholder="Start typing your club's name" autocomplete="off" style="font-size:1.1rem;padding:14px">
+        <datalist id="club-list">${clubs().map(c=>`<option value="${esc(c)}">`).join("")}</datalist></label>
+      <p class="small muted">Not listed? Type it anyway. <button class="link" data-act="import-clubs">Load the Miami Central club list (CSV)</button></p>
+      <div class="stack" style="gap:10px"><b>Your tier status from last semester</b>
+        <div class="tiers">${[1,2,3,4].map(t=>`<button class="tier" data-tier="${t}" aria-pressed="${UI.welcomeTier===t}"><b>Tier ${t}</b><span>${money(TIERS[t],1)} max</span></button>`).join("")}</div></div>
+      <button class="btn go big" data-act="start">Start my budget →</button>
+    </div>
+    ${Object.keys(Store.apps).length?`<div class="stack" style="gap:8px"><b>Or pick up where you left off</b>${Object.values(Store.apps).map(x=>`<button class="qi" data-open="${x.id}"><div class="row between"><b>${esc(x.club)}</b>${pill(x.status)}</div><span class="small muted">${esc(x.semester)} · ${money(totals(x).total)}</span></button>`).join("")}</div>`:""}
+  </div>`;
+}
+function notice(a){const n=a.notices.find(n=>n.to==="org"&&!n.read);return n?`<div class="banner"><span>${esc(n.t)}</span><button class="btn sm" data-act="dismiss" data-id="${n.id}">Got it</button></div>`:""}
+const STAGES=[[1,"Budget"],[2,"ASG approval"],[3,"Workday request"],[4,"Card"],[5,"Receipts & audit"]];
+function stageState(a){
+  const s=a.status;const approved=["approved","partial","sa_submitted","sa_returned","card_ready","card_picked"].includes(s);
+  return {
+    1:{done:s!=="draft",st:a.lines.length?money(totals(a).total)+" planned":"Not started"},
+    2:{done:approved,wait:s==="review",st:s==="review"?"With ASG":s==="denied"?"Denied":approved?`${money(sum(Object.values(a.asg.approved)))} approved`:"After you submit"},
+    3:{done:["card_ready","card_picked"].includes(s),wait:s==="sa_submitted",st:s==="sa_submitted"?"With Accounts Payable":s==="sa_returned"?"Sent back":["card_ready","card_picked"].includes(s)?"Approved":"After ASG approves"},
+    4:{done:s==="card_picked",wait:s==="card_ready",st:s==="card_ready"?"Ready to pick up":s==="card_picked"?`Active · ${money(a.card.loaded)}`:"After Workday"},
+    5:{done:a.audit.status==="passed",wait:a.audit.status==="submitted",st:a.audit.status==="passed"?"Audit passed":a.audit.status==="submitted"?"ASG is auditing":a.audit.status==="returned"?"Changes requested":a.receipts.length?`${a.receipts.length} receipts`:"As you spend"}
+  };
+}
+function paintPath(a){const st=stageState(a);$("#path").innerHTML=STAGES.map(([n,l])=>{const x=st[n];return `<button class="node ${x.done?"done":""} ${x.wait?"wait":""} ${UI.stage===n?"cur":""}" data-stage="${n}" ${UI.stage===n?'aria-current="step"':""}><span class="dot">${x.done?"✓":n}</span><span class="lbl">${l}</span><span class="st">${esc(x.st)}</span></button>`}).join("")}
+function stage(a){return [null,stBudget,stASG,stWorkday,stCard,stReceipts][UI.stage](a)}
+function pill(s){const m={draft:["Draft","p-mute"],review:["With ASG","p-warn"],approved:["Approved","p-ok"],partial:["Partly approved","p-warn"],denied:["Denied","p-bad"],sa_submitted:["With Accounts Payable","p-info"],sa_returned:["Sent back","p-bad"],card_ready:["Card ready","p-red"],card_picked:["Card active","p-ok"]}[s]||[s,"p-mute"];return `<span class="pill ${m[1]}">${m[0]}</span>`}
+
+/* ---- stage 1: budget ---- */
+function stBudget(a){
+  const locked=a.status!=="draft";const empty=!a.lines.length&&!UI.manual;
+  return `<div class="stack" style="gap:22px">
+    <div class="head"><div class="stack" style="gap:6px"><h1>${locked?"Your budget":"Build your budget"}</h1><p class="sub">${locked?"Submitted to ASG. Here's what you asked for.":`${esc(a.semester)} · Tier ${a.tier} · up to ${money(TIERS[a.tier],1)}`}</p></div>
+    ${!empty&&!locked&&!UI.fill?`<button class="btn sm" data-act="show-agent">Fill from a meeting</button>`:""}</div>
+    ${!locked&&(empty||UI.fill||UI.showAgent)?agentCard(a):""}
+    ${!empty?budgetEditor(a,locked):""}
+  </div>`;
+}
+function agentCard(a){
+  const s=UI.rec.state;
+  if(UI.fill==="sample")return `<div class="card"><div class="row between"><div class="mini">${mini(s==="reading"?2:1)}</div><button class="btn sm" data-act="skip-sample">Skip to the budget</button></div>
+    <h2>Example: a 2-minute budget meeting</h2><p class="muted">${BE.tts?"Voices by ElevenLabs.":"Read along — the live site plays this with ElevenLabs voices."} FundPath turns it into the budget when it ends.</p>
+    <div class="script">${SCRIPT.map(([n,r,t],i)=>`<div class="utt ${UI.sampleAt===i?"on":""} ${i>UI.sampleAt?"later":""}"><div class="av" style="background:${VOICE[n]}">${n[0]}</div><div><div class="who">${n} · ${r}</div><div>${esc(t)}</div></div></div>`).join("")}</div>
+    ${s==="reading"?`<div class="row"><span class="spin"></span><b>Writing your budget…</b></div>`:""}</div>`;
+  if(UI.fill==="record"||UI.fill==="upload"||UI.fill==="paste"||["transcribing","reading","error"].includes(s)&&UI.fill){
+    let body="";
+    if(UI.fill==="paste"&&!["reading"].includes(s))body=`<h2>Paste your meeting notes</h2><p class="muted">Include events, dates, how many people, and the dollar amounts.</p><textarea id="paste-notes" rows="7" placeholder="Event one: General Body Meetings, Jan 27 to Apr 28. Catering $600…">${esc(a.transcript)}</textarea><div class="row"><button class="btn go big" data-act="read-notes">Fill my budget</button><button class="link" data-act="cancel-fill">Cancel</button></div>`;
+    else if(s==="recording")body=`<h2>Listening to your meeting…</h2><p class="muted">Talk through each event, trip and expense with the costs. Press stop when you're done.</p><div class="rec"><button class="recbtn" data-act="stop-rec" aria-label="Stop recording">${ICON.stop}</button><div><div class="timer" id="rec-time">0:00</div><div class="muted small">Recording · ElevenLabs will transcribe it</div></div></div>`;
+    else if(s==="transcribing")body=`<div class="row"><span class="spin"></span><h2>Transcribing with ElevenLabs…</h2></div><p class="muted">Usually a few seconds per minute of audio.</p>`;
+    else if(s==="reading")body=`<div class="row"><span class="spin"></span><h2>Writing your budget…</h2></div><p class="muted">Pulling out every event, trip and cost, then checking ASG's rules.</p>`;
+    else if(s==="error")body=`<h2>That didn't work</h2><p>${esc(UI.rec.msg)}</p><div class="row"><button class="btn go" data-act="rec">Try recording again</button><button class="btn" data-act="paste">Paste notes instead</button><button class="link" data-act="cancel-fill">Cancel</button></div>`;
+    else body=`<div class="row"><span class="spin"></span><b>Getting the microphone ready…</b></div>`;
+    return `<div class="card"><div class="mini">${mini(s==="transcribing"?1:s==="reading"?2:0)}</div>${body}</div>`;
+  }
+  return `<div class="agent">
+    <div class="stack" style="gap:8px"><h2>Skip the typing. Record your budget meeting.</h2><p class="sub" style="color:var(--ink)">Talk through your plans with your exec board. FundPath listens, writes every expense into this budget, and checks it against ASG's rules.</p></div>
+    <div class="tiles">
+      <button class="tile primary" data-act="rec"><span class="ic">${ICON.mic}</span><b>Record our meeting</b><span>Start now, stop when you're done</span></button>
+      <button class="tile" data-act="upload-audio"><span class="ic">${ICON.up}</span><b>Upload a recording</b><span>Voice memo, Zoom or Teams audio</span></button>
+      <button class="tile" data-act="sample"><span class="ic">${ICON.play}</span><b>Hear an example first</b><span>2 minutes, ElevenLabs voices</span></button>
+    </div>
+    <p class="muted">Or <button class="link" data-act="paste">paste meeting notes</button> · <button class="link" data-act="manual">type it in yourself</button>${UI.showAgent?` · <button class="link" data-act="hide-agent">close</button>`:""}</p>
+  </div>`;
+}
+function mini(at){return ["Record","Transcribe","Build budget"].map((t,i)=>`<span class="${i<at?"ok":i===at?"on":""}">${i<at?"✓":i+1} ${t}</span>`).join("<i>→</i>")}
+function budgetEditor(a,locked){
+  const v=validate(a),t=v.t,fl=id=>v.all.filter(i=>i.line===id),fe=id=>v.all.filter(i=>i.ev===id&&!i.line);
+  const pct=t.cap?Math.min(100,t.total/t.cap*100):0;const dis=locked?"disabled":"";
+  const catSel=(l,list)=>`<select data-bind="lines.${a.lines.indexOf(l)}.category" aria-label="Category" ${dis}>${list.map(c=>`<option value="${c}" ${c===l.category?"selected":""}>${CAT_NAMES[c]}</option>`).join("")}</select>`;
+  const line=(l,list)=>{const i=a.lines.indexOf(l);const f=fl(l.id);return `<div class="ln">
+      <input type="text" data-bind="lines.${i}.item" value="${esc(l.item)}" placeholder="What is it?" aria-label="Expense" ${dis}>
+      ${catSel(l,list)}
+      <input class="amt" type="number" step="0.01" min="0" data-bind="lines.${i}.amount" value="${esc(l.amount)}" placeholder="$" aria-label="Amount" ${dis}>
+      <input type="text" data-bind="lines.${i}.vendor" value="${esc(l.vendor)}" placeholder="Vendor (optional)" aria-label="Vendor" ${dis}>
+      ${l.quote?`<span class="pill p-ok" title="${esc(l.quote)}">Quote ✓</span>`:(l.category==="Trip: Hotels"||l.category==="Trip: Flights"||+l.amount>1000)&&!locked?`<label class="btn sm" for="q-${l.id}">Add quote</label><input type="file" id="q-${l.id}" data-quote="${l.id}" hidden>`:"<span></span>"}
+      ${locked?"<span></span>":`<button class="x" data-act="del-line" data-id="${l.id}" aria-label="Remove expense">×</button>`}
+      ${f.length||l.note?`<div class="why">${f.map(x=>`<div class="flag ${x.sev}">${x.sev==="error"?"●":"▲"} ${esc(x.msg)}${x.fix==="hotel"?` <button class="btn sm" data-act="fix" data-k="hotel">Fix it</button>`:""}</div>`).join("")}${l.note&&!f.length?`<span class="muted">${esc(l.note)}</span>`:""}</div>`:""}
+    </div>`};
+  const clubMissing=v.all.some(x=>x.club);
+  const clubBlock=`<details class="more" id="club-details" ${clubMissing?"open":""}><summary>${clubMissing?"First, who's on your exec board? (once per year)":"Club details"} ${clubMissing?`<span class="pill p-bad">needed</span>`:`<span class="pill p-ok">done</span>`}</summary>
+      <div class="grid">
+        ${fld("org.treasurer","Treasurer",a.org.treasurer,dis)}${fld("org.treasurerEmail","Treasurer email",a.org.treasurerEmail,dis,"name@miamioh.edu")}
+        ${fld("org.president","President",a.org.president,dis)}${fld("org.presidentEmail","President email",a.org.presidentEmail,dis,"name@miamioh.edu")}
+        ${fld("org.advisor","Advisor",a.org.advisor,dis)}${fld("org.email","Club email",a.org.email,dis,"club@miamioh.edu")}
+        ${fld("org.sa","SA number (Workday worktag)",a.org.sa,dis,"SA1####")}${fld("org.prior","ASG money already received this semester ($)",a.org.prior,dis,"0","number")}
+      </div>${locked?"":`<p class="small muted">Saved for next time. <button class="link" data-act="sample-club">Use sample details</button></p>`}</details>`;
+  const done=UI.rec.state==="done"?`<div class="banner"><span>FundPath filled in ${UI.rec.n} expenses across ${UI.rec.e} events and trips from your meeting. ${v.errors.length?"Fix the red items, then submit.":"Look it over, then submit."}</span><button class="btn sm" data-act="ack-done">OK</button></div>`:"";
+  return `<div class="stack" id="budget" style="gap:18px">${done}
+    ${clubMissing?clubBlock:""}
+    <div class="card tight total"><div class="row between"><span class="big">${money(t.total)} <span class="muted" style="font-size:1rem;font-weight:600">of ${money(t.cap,1)}</span></span>
+      ${a.source?`<span class="pill p-info">Filled from your meeting by ${esc(a.source)}</span>`:""}</div>
+      <div class="bar"><i class="${t.total>t.cap?"over":pct>92?"near":""}" style="width:${pct}%"></i></div>
+      ${v.all.filter(x=>x.fix==="total"||x.fix==="food").map(x=>`<div class="flag error">● ${esc(x.msg)} <button class="btn sm" data-act="fix" data-k="${x.fix}">Fix it</button></div>`).join("")}</div>
+    ${a.events.map(e=>{const i=a.events.indexOf(e);const lines=a.lines.filter(l=>l.eventId===e.id&&l.group==="event");const f=fe(e.id);return `<div class="ev">
+      <div class="ev-h"><span class="tag ${e.type==="Trip"?"trip":"event"}">${e.type.toUpperCase()}</span>
+        <input class="name" type="text" data-bind="events.${i}.name" value="${esc(e.name)}" placeholder="Name, exactly as on Miami Central" aria-label="Name" ${dis}>
+        <input class="date" type="text" data-bind="events.${i}.date" value="${esc(e.date)}" placeholder="Dates" aria-label="Dates" ${dis}>
+        ${e.type==="Trip"?`<input class="tiny" type="number" min="0" data-bind="events.${i}.people" value="${esc(e.people)}" aria-label="People" title="People" ${dis}><span class="small muted">people</span><input class="tiny" type="number" min="0" data-bind="events.${i}.nights" value="${esc(e.nights)}" aria-label="Nights" title="Nights" ${dis}><span class="small muted">nights</span>`:""}
+        <label class="toggle"><input type="checkbox" data-bind="events.${i}.onHub" ${e.onHub?"checked":""} ${dis}> On Miami Central</label>
+        ${locked?"":`<button class="x" data-act="del-event" data-id="${e.id}" aria-label="Remove">×</button>`}
+      </div>
+      ${f.length?`<div style="padding:8px 16px 0">${f.map(x=>`<div class="flag ${x.sev}">● ${esc(x.msg)}</div>`).join("")}</div>`:""}
+      ${lines.map(l=>line(l,EVENT_CATS.filter(c=>c.startsWith(e.type==="Trip"?"Trip:":"Event:")))).join("")}
+      ${locked?"":`<div class="addln"><button class="link" data-act="add-line" data-ev="${e.id}">+ Add expense</button></div>`}
+    </div>`}).join("")}
+    <div class="ev"><div class="ev-h"><span class="tag ne">NOT TIED TO AN EVENT</span><span class="small muted">Capital items, admin, marketing, banners, storage</span></div>
+      ${a.lines.filter(l=>l.group==="nonevent").map(l=>line(l,NONEVENT_CATS)).join("")}
+      ${locked?"":`<div class="addln"><button class="link" data-act="add-line" data-ev="">+ Add expense</button></div>`}</div>
+    ${locked?"":`<div class="row"><button class="btn" data-act="add-event" data-type="Event">+ Add event</button><button class="btn" data-act="add-event" data-type="Trip">+ Add trip</button></div>`}
+    ${clubMissing?"":clubBlock}
+  </div>`;
+}
+const fld=(p,l,v,dis,ph="",type="text")=>`<label class="f">${l}<input type="${type}" data-bind="${p}" value="${esc(v)}" placeholder="${esc(ph)}" ${dis}></label>`;
+function paintDock(){
+  const a=cur(),d=$("#dock"),din=$("#dock-in");
+  if(UI.role!=="org"||!a){d.hidden=true;return}
+  let html="";
+  if(UI.stage===1&&a.status==="draft"&&a.lines.length){
+    const v=validate(a);
+    html=v.errors.length?`<div class="msg"><span class="pill p-bad">${v.errors.length} to fix</span><button class="link" data-act="show-fix">Show me</button></div><button class="btn go big" data-act="submit" disabled>Submit to ASG</button>`
+      :`<div class="msg"><span class="pill p-ok">Ready</span><span class="muted" style="font-weight:600">${v.reviews.length?"A person at ASG will review "+v.reviews.length+" item(s).":"Clean budgets are approved the moment you submit."}</span></div><button class="btn go big" data-act="submit">Submit to ASG →</button>`;
+    if(UI.showFix&&v.errors.length)html=`<div class="stack" style="gap:6px;flex:1 1 400px">${v.errors.slice(0,4).map(x=>`<div class="flag error">● ${esc(x.msg)} <span class="src">${esc(x.src)}</span></div>`).join("")}${v.errors.length>4?`<span class="small muted">+${v.errors.length-4} more marked in red above</span>`:""}</div><div class="row"><button class="btn" data-act="hide-fix">Hide</button><button class="btn go big" disabled>Submit to ASG</button></div>`;
+  } else if(UI.stage===5&&a.card.status==="picked"&&a.receipts.length&&["none","returned"].includes(a.audit.status)){
+    const bad=a.receipts.filter(r=>receiptChecks(a,r).some(x=>x.sev==="error")).length;
+    html=`<div class="msg">${bad?`<span class="pill p-bad">${bad} receipt(s) need details</span>`:`<span class="pill p-ok">Ready</span><span class="muted" style="font-weight:600">${a.receipts.length} receipts · ${money(sum(a.receipts.map(r=>r.amount)))}</span>`}</div><button class="btn go big" data-act="submit-audit" ${bad?"disabled":""}>Submit audit to ASG →</button>`;
+  }
+  d.hidden=!html;din.innerHTML=html;
+}
+
+/* ---- stage 2: ASG ---- */
+function stASG(a){
+  const s=a.status;
+  if(s==="draft")return lockedStage("ASG approval","Submit your budget first. Clean budgets are approved instantly.","Go to my budget",1);
+  if(s==="review")return `<div class="stack"><h1>ASG approval</h1>${hero("wait","…","With the Secretary of Treasury","A few items need a person's eyes. You'll get the decision and every reason right here.")}${whatsNext(["Submitted","ASG review","Decision","Workday"],1)}</div>`;
+  const x=a.asg,appr=sum(Object.values(x.approved)),req=totals(a).total;
+  const changed=a.lines.filter(l=>+x.approved[l.id]<+l.amount);
+  const word={auto:"Approved instantly",approved:"Approved",partial:"Approved with changes",denied:"Not approved"}[x.decision];
+  return `<div class="stack" style="gap:20px"><h1>ASG approval</h1>
+    ${hero(x.decision==="denied"?"bad":x.decision==="partial"?"wait":"ok",x.decision==="denied"?"×":"✓",`${word}: ${money(appr)}`,`${x.decision==="partial"?`You asked for ${money(req)}. `:""}${esc(x.note)}`)}
+    ${changed.length?`<div class="card"><h3>What changed and why</h3><div class="tw"><table><thead><tr><th>Expense</th><th class="r">Asked</th><th class="r">Approved</th><th>Reason</th></tr></thead><tbody>${changed.map(l=>`<tr><td>${esc(l.item)}</td><td class="r num">${money(l.amount)}</td><td class="r num"><b>${money(x.approved[l.id])}</b></td><td class="small">${esc(x.reasons[l.id]||"")}</td></tr>`).join("")}</tbody></table></div></div>`:""}
+    <div class="row">${x.decision==="denied"?`<button class="btn go big" data-act="revise">Fix and resubmit</button>`:`<button class="btn go big" data-act="stage" data-n="3">Next: send it to Workday →</button>`}</div></div>`;
+}
+const hero=(tone,ic,title,body)=>`<div class="hero ${tone}"><span class="ic">${ic}</span><div class="stack" style="gap:6px"><h2>${title}</h2><p>${body}</p></div></div>`;
+const lockedStage=(title,msg,btn,n)=>`<div class="stack"><h1>${title}</h1>${hero("info","i","Not yet",msg)}<div><button class="btn go big" data-act="stage" data-n="${n}">${btn}</button></div></div>`;
+const whatsNext=(steps,at)=>`<div class="card tight"><div class="flow">${steps.map((t,i)=>`<div class="fs ${i<at?"done":""} ${i===at?"cur":""}"><span class="d">${i<at?"✓":i+1}</span><b>${t}</b></div>`).join("")}</div></div>`;
+
+/* ---- stage 3: workday ---- */
+function stWorkday(a){
+  const s=a.status;
+  if(["draft","review","denied"].includes(s))return lockedStage("Workday request","This unlocks when ASG approves your budget.","See ASG status",2);
+  const sent=["sa_submitted","card_ready","card_picked"].includes(s);
+  if(!a.sa)a.sa=buildSA(a);const sa=a.sa;
+  const modeTag=`<span class="mode"><i class="${BE.workday==="live"?"on":""}"></i>Workday: ${BE.workday==="live"?"connected":"demo mode"}</span>`;
+  if(sent){const at=s==="sa_submitted"?2:4;return `<div class="stack" style="gap:20px"><div class="head"><h1>Workday request</h1>${modeTag}</div>
+    ${hero(at===4?"ok":"info",at===4?"✓":"→",at===4?"Approved. Your card has the money.":"Sent to Workday",`Spend Authorization <span class="mono">${esc(sa.workday?.id||"")}</span> · ${money(sa.total)} · ${esc(sa.workday?.status||"")}`)}
+    ${whatsNext(["Sent","Advisor approves","Accounts Payable","Funds loaded"],at)}
+    <div class="row">${at===4?`<button class="btn go big" data-act="stage" data-n="4">Next: get your card →</button>`:`<button class="btn" data-act="wd-refresh">Check status</button><span class="muted">Accounts Payable says 2–3 business days after your advisor approves.</span>`}</div></div>`}
+  return `<div class="stack" style="gap:20px">
+    <div class="head"><div class="stack" style="gap:6px"><h1>Send it to Workday</h1><p class="sub">FundPath filled in your Spend Authorization from what ASG approved. Nothing to retype.</p></div>${modeTag}</div>
+    ${s==="sa_returned"?hero("bad","!","Accounts Payable sent it back",esc(a.returned||"")+" This is a fresh request; the old one isn't resubmitted."):""}
+    <div class="card"><div class="row between"><span class="big">${money(sa.total)}</span><select data-bind="sa.description" aria-label="Request type" style="width:auto">${["NEW CARD","ADD FUNDS","RENTAL/GAS CARDS"].map(x=>`<option ${sa.description===x?"selected":""}>${x}</option>`).join("")}</select></div>
+      <div class="tw"><table><thead><tr><th>Spend category</th><th class="r">Amount</th><th>What it covers</th></tr></thead><tbody>
+      ${sa.lines.map((l,i)=>`<tr><td style="min-width:220px"><select data-bind="sa.lines.${i}.sc" aria-label="Spend category">${Object.entries(SPEND).map(([k,v])=>`<option value="${k}" ${k===l.sc?"selected":""}>${k==="FUEL"?"":k+" · "}${v}</option>`).join("")}</select>${l.sure?"":`<div class="small" style="color:var(--warn)">Best guess — confirm with SEA</div>`}</td><td class="r num">${money(l.amount)}</td><td class="small">${esc(l.memo)}</td></tr>`).join("")}
+      </tbody></table></div>
+      <details class="more"><summary>Everything else Workday asks for (filled in)</summary><div class="stack" style="gap:10px">
+        <div class="grid"><label class="f">Start date<input type="date" data-bind="sa.start" value="${sa.start}"></label><label class="f">End date<input type="date" data-bind="sa.end" value="${sa.end}"></label></div>
+        <p><b>Worktag:</b> <span class="mono">${esc(a.org.sa)} · FD1000 / PRG040</span> · <b>Business purpose:</b> Student Org Card Request · <b>Cash advance:</b> No</p>
+        <label class="f">Justification<textarea data-bind="sa.justification" rows="4">${esc(sa.justification)}</textarea></label>
+        <button class="link" data-act="copy-sa">Copy as a table instead</button></div></details>
+    </div>
+    <div><button class="btn go big" data-act="send-wd" ${UI.sending?"disabled":""}>${UI.sending?"Sending…":"Send to Workday →"}</button></div>
+  </div>`;
+}
+/* ---- stage 4: card ---- */
+function stCard(a){
+  const st=a.card.status;
+  if(st==="none")return lockedStage("Your card","Your card is released after Accounts Payable approves the Workday request.","See Workday status",3);
+  if(st==="ready")return `<div class="stack" style="gap:20px"><h1>Pick up your card</h1>${hero("ok","✓",`Ready with ${money(a.card.loaded)}`,"Accounts Payable · 107 Roudebush Hall · 501 E. High St., Oxford. Bring your Miami ID.")}<p class="muted">Questions or a declined card: AccountsPayable@miamioh.edu · (513) 529-9200. Accounts Payable marks it picked up.</p></div>`;
+  return `<div class="stack" style="gap:20px"><h1>Your card</h1>${hero("ok","✓",`Card ending ${esc(a.card.last4||"····")} is active`,`${money(a.card.loaded)} loaded. Save every receipt as you spend.`)}<div><button class="btn go big" data-act="stage" data-n="5">Next: add receipts →</button></div></div>`;
+}
+/* ---- stage 5: receipts & audit ---- */
+function stReceipts(a){
+  if(!a.asg||a.status==="denied")return lockedStage("Receipts & audit","Receipts are checked against what ASG approved, so this opens after approval.","See ASG status",2);
+  const spent=sum(a.receipts.map(r=>r.amount)),loaded=+a.card.loaded||sum(Object.values(a.asg.approved));const left=loaded-spent;const pct=loaded?Math.min(100,spent/loaded*100):0;
+  const au=a.audit.status;const ro=au==="submitted"||au==="passed";
+  const summ=auditSummary(a);
+  return `<div class="stack" style="gap:22px">
+    <div class="head"><div class="stack" style="gap:6px"><h1>Receipts & audit</h1><p class="sub">Add each receipt. FundPath names it, sorts it and checks ASG's caps. When you're done, send the whole set to ASG for audit.</p></div></div>
+    ${au==="submitted"?hero("wait","…","ASG is auditing your receipts",`Submitted ${day(a.audit.at)}. You'll see any notes on each receipt here.`):au==="passed"?hero("ok","✓","Audit passed",esc(a.audit.note||"ASG accepted every receipt.")+" Close your Spend Authorization in Workday to release unused funds."):au==="returned"?hero("bad","!","ASG asked for changes",esc(a.audit.note||"See the notes on the receipts below.")):""}
+    <div class="card tight total"><div class="row between"><span class="big">${money(left)} <span class="muted" style="font-size:1rem;font-weight:600">left of ${money(loaded)}</span></span><span class="muted">${money(spent)} spent</span></div><div class="bar"><i class="${left<0?"over":pct>92?"near":""}" style="width:${pct}%"></i></div></div>
+    ${ro?"":`<div class="drop" id="drop" data-act="pick-receipts" role="button" tabindex="0"><span class="tile" style="border:0;padding:0;background:none;align-items:center"><span class="ic">${ICON.up}</span></span><b style="font-size:1.15rem">Drop receipts here, or click to choose files</b><span class="muted">PDFs or photos. Named like <span class="mono">10.5.26 Kofenya Guest Speaker Invoice - $14.95</span>? FundPath reads the date, vendor and amount for you.</span></div>
+      <p class="muted" style="margin-top:-10px">Or <button class="link" data-act="add-receipt">add one by hand</button> · <button class="link" data-act="sample-receipts">load our 7 sample receipts</button></p>`}
+    ${a.receipts.length?`<div class="stack" style="gap:12px">${[...a.receipts].sort((x,y)=>(y.date||"").localeCompare(x.date||"")).map(r=>receiptCard(a,r,ro)).join("")}</div>`:""}
+    ${summ.length?`<div class="card"><h3>By category</h3><div class="tw"><table class="sumtbl"><thead><tr><th>Category</th><th class="r">Receipts</th><th class="r">Spent</th><th class="r">ASG approved</th><th>Check</th></tr></thead><tbody>
+      ${summ.map(x=>`<tr><td>${x.c.label}</td><td class="r num">${x.count}</td><td class="r num">${money(x.spent)}</td><td class="r num">${money(x.appr)}</td><td>${x.flags.length?x.flags.map(f=>`<div class="flag error">● ${esc(f.msg)}</div>`).join(""):`<span class="pill p-ok">OK</span>`}</td></tr>`).join("")}
+      </tbody></table></div></div>`:""}
+  </div>`;
+}
+function receiptCard(a,r,ro){
+  const i=a.receipts.indexOf(r);const ch=receiptChecks(a,r);const name=stdName(r);const dis=ro?"disabled":"";
+  return `<div class="rc ${ch.some(x=>x.sev==="error")?"bad":""}">
+    <div class="rc-top"><div class="row" style="gap:8px">${ICON.file}<span class="fname">${esc(name||r.fileName||"New receipt")}</span>${r.sample?`<span class="pill p-mute">sample</span>`:""}</div>
+      <div class="row" style="gap:6px">${name?`<button class="btn sm" data-act="copy-name" data-id="${r.id}">Copy name</button>`:""}${r.hasFile&&BE.api?`<button class="btn sm" data-act="dl-receipt" data-id="${r.id}">Download renamed</button>`:""}${ro?"":`<button class="x" data-act="del-receipt" data-id="${r.id}" aria-label="Remove receipt">×</button>`}</div></div>
+    <div class="rc-f">
+      <label class="f">Date<input type="date" data-bind="receipts.${i}.date" value="${esc(r.date)}" ${dis}></label>
+      <label class="f">Vendor<input type="text" data-bind="receipts.${i}.vendor" value="${esc(r.vendor)}" placeholder="e.g. Kofenya" ${dis}></label>
+      <label class="f">Amount ($)<input type="number" step="0.01" min="0" data-bind="receipts.${i}.amount" value="${esc(r.amount)}" ${dis}></label>
+      <label class="f">Tip ($)<input type="number" step="0.01" min="0" data-bind="receipts.${i}.tip" value="${esc(r.tip||0)}" ${dis}></label>
+    </div>
+    <div class="cats" role="group" aria-label="Category">${RCATS.map(c=>`<button class="cat" data-rcat="${c.k}" data-id="${r.id}" aria-pressed="${r.category===c.k}" title="${esc(c.hint)}" ${dis}>${c.label}</button>`).join("")}</div>${r.category?`<span class="small muted" style="margin-top:-6px">${esc(RC[r.category].label)}: ${esc(RC[r.category].hint)}</span>`:`<span class="small muted" style="margin-top:-6px">Pick the category that fits best.</span>`}
+    ${r.category==="trip"?`<div class="row"><select data-bind="receipts.${i}.tripType" style="width:auto" aria-label="Trip cost" ${dis}><option value="">What kind of trip cost?</option>${Object.entries(TRIP_TYPES).map(([k,v])=>`<option value="${k}" ${r.tripType===k?"selected":""}>${v}</option>`).join("")}</select>${["hotel","flight"].includes(r.tripType)?`<input type="number" min="0" style="width:110px" data-bind="receipts.${i}.people" value="${esc(r.people)}" placeholder="People" aria-label="People" ${dis}>`:""}${r.tripType==="hotel"?`<input type="number" min="0" style="width:110px" data-bind="receipts.${i}.nights" value="${esc(r.nights)}" placeholder="Nights" aria-label="Nights" ${dis}>`:""}</div>`:""}
+    ${r.category==="capital"?`<label class="toggle"><input type="checkbox" data-bind="receipts.${i}.kept" ${r.kept?"checked":""} ${dis}> We'll keep this more than a year</label>`:""}
+    ${!r.hasFile&&!r.sample&&!ro?`<div><label class="btn sm" for="rf-${r.id}">Attach receipt file</label><input type="file" id="rf-${r.id}" data-rfile="${r.id}" accept="application/pdf,image/*" hidden></div>`:""}
+    ${ch.length?`<div class="stack" style="gap:4px">${ch.map(x=>`<div class="flag ${x.sev}">${x.sev==="error"?"●":"▲"} ${esc(x.msg)}${x.src?` <span class="src">${esc(x.src)}</span>`:""}</div>`).join("")}</div>`:`<div class="flag" style="color:var(--ok)">✓ Passes ASG's rules</div>`}
+    ${r.asg?`<div class="flag ${r.asg.ok?"":"error"}">${r.asg.ok?"✓ ASG: accepted":"● ASG: "+esc(r.asg.note||"needs a fix")}</div>`:""}
+  </div>`;
+}
+
+/* ================= ASG VIEW ================= */
+function asgView(){
+  const apps=Object.values(Store.apps);
+  const props=apps.filter(a=>a.status!=="draft").sort((x,y)=>(y.submittedAt||"").localeCompare(x.submittedAt||""));
+  const audits=apps.filter(a=>a.audit.status!=="none");
+  const nP=props.filter(a=>a.status==="review").length,nA=audits.filter(a=>a.audit.status==="submitted").length;
+  return `<div class="stack" style="gap:8px;margin-bottom:8px"><h1>ASG Funding</h1><p class="sub">Clean budgets approve themselves. You only see what needs a person.</p></div>
+  <div class="tabs" role="tablist"><button class="tab" role="tab" data-asgtab="proposals" aria-selected="${UI.asgTab==="proposals"}">Budgets ${nP?`<span class="pill p-red">${nP}</span>`:""}</button><button class="tab" role="tab" data-asgtab="audits" aria-selected="${UI.asgTab==="audits"}">Audits ${nA?`<span class="pill p-red">${nA}</span>`:""}</button></div>
+  ${UI.asgTab==="proposals"?queue(props,"asgSel",a=>`${money(totals(a).total)} · ${a.asg?.decision==="auto"?"approved automatically":validate(a).reviews.length+" item(s) to review"}`,asgProposal,"No budgets submitted yet."):queue(audits,"auSel",a=>`${a.receipts.length} receipts · ${money(sum(a.receipts.map(r=>r.amount)))}`,asgAudit,"No audits submitted yet. Treasurers send receipts from step 5.",a=>auditPill(a.audit.status))}`;
+}
+const auditPill=s=>`<span class="pill ${({submitted:"p-warn",passed:"p-ok",returned:"p-bad"})[s]||"p-mute"}">${({submitted:"To audit",passed:"Passed",returned:"Sent back"})[s]||s}</span>`;
+function queue(list,key,line,detail,emptyMsg,pf){
+  if(!UI[key]||!list.some(a=>a.id===UI[key]))UI[key]=(list.find(a=>a.status==="review"||a.audit.status==="submitted")||list[0]||{}).id;
+  const sel=list.find(a=>a.id===UI[key]);
+  return `<div class="q2"><div class="qlist">${list.length?list.map(a=>`<button class="qi" data-q="${key}" data-id="${a.id}" aria-current="${a.id===UI[key]}"><div class="row between"><b>${esc(a.club)}</b>${pf?pf(a):pill(a.status)}</div><span class="small muted">${line(a)}</span></button>`).join(""):`<div class="empty"><b>Nothing here</b><span>${emptyMsg}</span></div>`}</div><div>${sel?detail(sel):""}</div></div>`;
+}
+function asgProposal(a){
+  const v=validate(a),open=a.status==="review";
+  if(!UI.draft||UI.draft.id!==a.id)UI.draft={id:a.id,approved:Object.fromEntries(a.lines.map(l=>[l.id,open?+l.amount:+(a.asg?.approved?.[l.id]||0)])),reasons:{...(a.asg?.reasons||{})},note:a.asg?.note||""};
+  const d=UI.draft;
+  return `<div class="card"><div class="head"><div><span class="small muted">Tier ${a.tier} · ${esc(a.org.sa)} · ${esc(a.org.treasurer)}</span><h2>${esc(a.club)}</h2></div>${pill(a.status)}</div>
+    ${v.reviews.length?`<div class="stack" style="gap:6px">${v.reviews.map(x=>`<div class="flag review">▲ ${esc(x.msg)} <span class="src">${esc(x.src)}</span></div>`).join("")}</div>`:""}
+    <div class="tw"><table><thead><tr><th>Expense</th><th class="r">Asked</th><th class="r">Approve</th><th>Reason the club sees</th></tr></thead><tbody>
+    ${a.lines.map(l=>{const f=v.all.filter(x=>x.line===l.id&&x.sev!=="info");return `<tr><td>${esc(l.item)}${f.length?` <span class="pill p-warn">check</span>`:""}<div class="small muted">${esc(CAT_NAMES[l.category])} · ${esc(evOf(a,l.eventId)?.name||"Not tied to an event")}</div></td><td class="r num">${money(l.amount)}</td>
+      <td style="width:120px"><input type="number" step="0.01" min="0" data-aamt="${l.id}" value="${d.approved[l.id]}" ${open?"":"disabled"} aria-label="Approve amount"></td>
+      <td style="min-width:200px"><input type="text" data-areason="${l.id}" value="${esc(d.reasons[l.id]||(f[0]?f[0].msg+" ("+f[0].src+")":""))}" ${open?"":"disabled"} aria-label="Reason"></td></tr>`}).join("")}</tbody></table></div>
+    ${open?`<label class="f">Note to the club<textarea data-anote="1" rows="3" placeholder="What changed and why">${esc(d.note)}</textarea></label>
+    <div class="row between"><button class="btn bad" data-act="asg-deny">Deny</button><button class="btn ok big" data-act="asg-approve">Approve as entered</button></div>`:`<p class="muted">${esc(a.asg?.note||"")}</p>`}</div>`;
+}
+function asgAudit(a){
+  const open=a.audit.status==="submitted";const summ=auditSummary(a);
+  return `<div class="card"><div class="head"><div><span class="small muted">${esc(a.org.treasurer)} · card ${esc(a.card.last4||"····")} · ${money(a.card.loaded)} loaded</span><h2>${esc(a.club)} audit</h2></div>${auditPill(a.audit.status)}</div>
+    <div class="tw"><table class="sumtbl"><thead><tr><th>Category</th><th class="r">Spent</th><th class="r">Approved</th><th>Check</th></tr></thead><tbody>${summ.map(x=>`<tr><td>${x.c.label}</td><td class="r num">${money(x.spent)}</td><td class="r num">${money(x.appr)}</td><td>${x.flags.length?x.flags.map(f=>`<div class="flag error">● ${esc(f.msg)}</div>`).join(""):`<span class="pill p-ok">OK</span>`}</td></tr>`).join("")}</tbody></table></div>
+    <div class="stack" style="gap:10px">${a.receipts.map(r=>{const ch=receiptChecks(a,r);const dec=UI.audDraft?.[r.id]??r.asg;return `<div class="rc"><div class="rc-top"><span class="fname">${esc(stdName(r)||r.fileName)}</span><div class="row" style="gap:6px">${r.hasFile?`<button class="btn sm" data-act="view-receipt" data-id="${r.id}">Open file</button>`:r.sample?`<span class="pill p-mute">sample</span>`:`<span class="pill p-bad">no file</span>`}</div></div>
+      ${ch.length?ch.map(x=>`<div class="flag ${x.sev}">${x.sev==="error"?"●":"▲"} ${esc(x.msg)}</div>`).join(""):`<div class="flag" style="color:var(--ok)">✓ Passes the automatic checks</div>`}
+      ${open?`<div class="row"><button class="cat" data-aud="${r.id}" data-ok="1" aria-pressed="${dec?.ok===true}">Accept</button><button class="cat" data-aud="${r.id}" data-ok="0" aria-pressed="${dec&&dec.ok===false}">Needs a fix</button>${dec&&dec.ok===false?`<input type="text" data-audnote="${r.id}" value="${esc(dec.note||"")}" placeholder="What should they fix?" style="flex:1 1 220px">`:""}</div>`:dec?`<div class="flag ${dec.ok?"":"error"}">${dec.ok?"✓ Accepted":"● "+esc(dec.note||"Needs a fix")}</div>`:""}</div>`}).join("")}</div>
+    ${open?`<div class="row between"><button class="btn" data-act="aud-accept-clean">Accept everything that passes</button><div class="row"><button class="btn bad" data-act="aud-return">Send back</button><button class="btn ok big" data-act="aud-pass">Pass audit</button></div></div>`:""}</div>`;
+}
+
+/* ================= AP VIEW ================= */
+function apView(){
+  const list=Object.values(Store.apps).filter(a=>a.sa&&a.sa.workday).sort((x,y)=>(y.sa.submittedAt||"").localeCompare(x.sa.submittedAt||""));
+  return `<div class="stack" style="gap:8px;margin-bottom:20px"><h1>Accounts Payable</h1><p class="sub">Spend Authorizations from FundPath, already checked. You make the call.</p></div>
+  ${queue(list,"apSel",a=>`${money(a.sa.total)} · ${esc(a.sa.workday.id)}`,apDetail,"Workday requests show up here when a treasurer sends one.")}`;
+}
+function apDetail(a){
+  const c=apChecks(a),hard=c.filter(x=>!x.ok&&!x.warn),soft=c.filter(x=>!x.ok&&x.warn);
+  return `<div class="card"><div class="head"><div><span class="small muted mono">${esc(a.sa.workday.id)} · ${esc(a.org.sa)} · FD1000 / PRG040</span><h2>${esc(a.club)} · ${money(a.sa.total)}</h2></div>${pill(a.status)}</div>
+    ${hero(hard.length?"bad":"ok",hard.length?"!":"✓",`Suggested: ${hard.length?"send back":"approve"}`,hard.length?hard.map(x=>esc(x.f)).join(" · "):soft.length?soft.map(x=>esc(x.f)).join(" · "):"Every check passed.")}
+    <div class="checks">${c.map(x=>`<div class="ck ${x.ok?"ok":x.warn?"na":"no"}"><span class="m">${x.ok?"✓":x.warn?"!":"✕"}</span><span>${esc(x.ok?x.t:x.f)}</span></div>`).join("")}</div>
+    <div class="tw"><table><thead><tr><th>Spend category</th><th class="r">Amount</th><th>Memo</th></tr></thead><tbody>${a.sa.lines.map(l=>`<tr><td class="small">${l.sc==="FUEL"?"":`<span class="mono">${l.sc}</span> · `}${esc(SPEND[l.sc]||l.sc)}</td><td class="r num">${money(l.amount)}</td><td class="small">${esc(l.memo)}</td></tr>`).join("")}</tbody></table></div>
+    ${a.status==="sa_submitted"?`<input type="text" id="ap-note" placeholder="Note if sending back (required)"><div class="row between"><button class="btn bad" data-act="ap-return">Send back</button><button class="btn ok big" data-act="ap-approve">Approve and load ${money(a.sa.total)}</button></div>`
+    :a.status==="card_ready"?`<div class="row"><input type="text" id="ap-last4" inputmode="numeric" maxlength="4" placeholder="Card last 4" style="width:150px"><button class="btn go big" data-act="ap-picked">Mark card picked up</button></div>`
+    :`<p class="muted">${a.status==="card_picked"?`Card ending ${esc(a.card.last4)} picked up ${day(a.card.pickedAt)}.`:""}</p>`}</div>`;
+}
+
+/* ================= CHAT ================= */
+function chatContext(){const a=cur();if(!a)return {};const t=totals(a);return {club:a.club,tier:a.tier,stage:STAGES[UI.stage-1][1],status:a.status,requested:t.total,limit:t.cap,approved:a.asg?sum(Object.values(a.asg.approved)):null,cardLoaded:a.card.loaded,receipts:a.receipts.length,openIssues:validate(a).errors.map(x=>x.msg).slice(0,6)}}
+function paintChat(){
+  const c=$("#chat");c.hidden=!UI.chat.open;if(!UI.chat.open)return;
+  const m=UI.chat.msgs;
+  c.innerHTML=`<div class="chat-h"><b>Ask FundPath</b><div class="row" style="gap:6px">${BE.agentId?`<button class="btn sm" data-act="talk">Talk instead</button>`:""}<button class="x" data-act="chat-close" aria-label="Close">×</button></div></div>
+  <div class="msgs" id="msgs">${m.length?"":`<div class="m a">Hi! I can help with anything about club money — ASG rules, Workday, receipts, or what to do next. What's up?</div><div class="sugg">${["What do I do next?","Can ASG pay for T-shirts?","How do I get Workday access?","Who do I email about my card?"].map(q=>`<button data-q2="${esc(q)}">${q}</button>`).join("")}</div>`}
+    ${m.map(x=>`<div class="m ${x.role==="user"?"u":"a"}">${esc(x.content)}</div>`).join("")}${UI.chat.busy?`<div class="m a"><span class="spin" style="display:inline-block;width:16px;height:16px;vertical-align:middle"></span></div>`:""}</div>
+  <div id="convai"></div>
+  <form id="chat-form"><input type="text" id="chat-in" placeholder="Ask anything…" autocomplete="off"><button class="btn go" type="submit">Send</button></form>`;
+  const box=$("#msgs");box.scrollTop=box.scrollHeight;
+}
+async function ask(q){
+  if(!q.trim()||UI.chat.busy)return;UI.chat.msgs.push({role:"user",content:q});UI.chat.busy=true;paintChat();
+  let reply=null;const msgs=UI.chat.msgs.slice(-16);
+  const sys=`You are FundPath's assistant for Miami University student org treasurers, many brand new. Be warm, plain and brief (2-6 sentences). Answer anything about club finances and ASG funding. Use these sourced rules when a rule matters and say where it's from; if they don't settle it, say so and name who to contact. Never invent limits or deadlines.\nRULES:\n${POLICY.map(p=>`- ${p[0]}: ${p[1]} [${p[2]}]`).join("\n")}\nTREASURER'S SITUATION: ${JSON.stringify(chatContext())}`;
+  if(BE.ai){try{const r=await fetch("/api/chat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({messages:msgs,context:chatContext()})});const d=await r.json();if(r.ok)reply=d.reply}catch{}}
+  if(!reply&&BE.claude){try{const r=await BE.claude([{role:"user",content:sys+"\n\nConversation so far follows. Reply to the last message."},{role:"assistant",content:"Understood."},...msgs],{modelTier:"default",cache:false});reply=r.text}catch{}}
+  if(!reply){const ql=q.toLowerCase();const hit=POLICY.filter(p=>ql.split(/\W+/).some(w=>w.length>3&&(p[0]+" "+p[1]).toLowerCase().includes(w)));
+    reply=/next/.test(ql)?nextStepText():hit.length?hit.slice(0,2).map(p=>`${p[1]} (${p[2]})`).join("\n\n"):"I'm not sure from the rules I have. ASG funding questions go to asgfunding@miamioh.edu; Workday and balance questions to studentorgfin@miamioh.edu."}
+  UI.chat.msgs.push({role:"assistant",content:reply});UI.chat.busy=false;paintChat();
+}
+function nextStepText(){const a=cur();if(!a)return "Pick your club and tier to start a budget.";const v=validate(a);
+  return {draft:v.errors.length?`Finish your budget: ${v.errors.length} item(s) need fixing, starting with "${v.errors[0].msg}"`:"Your budget is ready. Press Submit to ASG at the bottom.",review:"Wait for the Secretary of Treasury's decision; it'll show in step 2.",approved:"Send your approved budget to Workday in step 3.",partial:"Send the approved amount to Workday in step 3.",denied:"Fix the items ASG flagged and resubmit.",sa_submitted:"Accounts Payable is reviewing your Workday request.",sa_returned:"Send a fresh Workday request in step 3.",card_ready:"Pick up your card at 107 Roudebush Hall.",card_picked:"Add receipts as you spend, then submit them for audit in step 5."}[a.status]}
+function startVoiceAgent(){
+  if(!BE.agentId)return;const box=$("#convai");if(!box||box.dataset.on)return;box.dataset.on="1";
+  box.innerHTML=`<elevenlabs-convai agent-id="${esc(BE.agentId)}" dynamic-variables='${esc(JSON.stringify({club:cur()?.club||"",next_step:nextStepText()}))}'></elevenlabs-convai>`;
+  if(!document.querySelector("script[data-convai]")){const s=document.createElement("script");s.src="https://unpkg.com/@elevenlabs/convai-widget-embed";s.async=true;s.dataset.convai="1";document.head.appendChild(s)}
+}
+
+/* ================= EVENTS ================= */
+function setPath(o,p,v){const k=p.split(".");for(let i=0;i<k.length-1;i++)o=o[k[i]];o[k[k.length-1]]=v}
+document.addEventListener("click",async e=>{
+  const t=e.target;
+  const st=t.closest("[data-stage]");if(st){UI.stage=+st.dataset.stage;lsSet("fp.stage",UI.stage);UI.showFix=false;render();window.scrollTo({top:0});return}
+  const tr=t.closest("[data-tier]");if(tr){UI.welcomeClub=$("#w-club")?.value||UI.welcomeClub;UI.welcomeTier=+tr.dataset.tier;render();return}
+  const op=t.closest("[data-open]");if(op){UI.appId=op.dataset.open;lsSet("fp.app",UI.appId);UI.stage=1;render();return}
+  const q=t.closest("[data-q]");if(q){UI[q.dataset.q]=q.dataset.id;UI.draft=null;UI.audDraft=null;render();return}
+  const at=t.closest("[data-asgtab]");if(at){UI.asgTab=at.dataset.asgtab;render();return}
+  const rc=t.closest("[data-rcat]");if(rc&&!rc.disabled){const a=cur();const r=a.receipts.find(x=>x.id===rc.dataset.id);r.category=rc.dataset.rcat;save(a);render();return}
+  const au=t.closest("[data-aud]");if(au){UI.audDraft=UI.audDraft||{};UI.audDraft[au.dataset.aud]={ok:au.dataset.ok==="1",note:UI.audDraft[au.dataset.aud]?.note||""};render();return}
+  const q2=t.closest("[data-q2]");if(q2){ask(q2.dataset.q2);return}
+  if(t.closest("#ask-open")){UI.chat.open=!UI.chat.open;paintChat();if(UI.chat.open)setTimeout(()=>$("#chat-in")?.focus(),50);return}
+  if(t.closest("#club-chip")){UI.appId=null;lsSet("fp.app",null);render();return}
+  const b=t.closest("[data-act]");if(!b)return;const a=cur();
+  const act={
+    start:()=>{const club=($("#w-club").value||"").trim();if(!club){toast("Type your club's name");$("#w-club").focus();return}
+      let app=Object.values(Store.apps).find(x=>x.club===club&&x.status!=="card_picked");if(!app){app=newApp(club,UI.welcomeTier);const prev=Object.values(Store.apps).find(x=>x.club===club);if(prev)app.org={...prev.org,prior:0}}
+      app.tier=UI.welcomeTier;UI.appId=app.id;lsSet("fp.app",app.id);UI.stage=1;lsSet("fp.stage",1);save(app,true);render()},
+    "import-clubs":()=>$("#file-clubs").click(),
+    rec:startRecording,"stop-rec":stopRecording,
+    "upload-audio":()=>$("#file-audio").click(),
+    sample:playSample,"skip-sample":skipSample,
+    paste:()=>{UI.fill="paste";UI.rec={state:"idle"};render();setTimeout(()=>$("#paste-notes")?.focus(),50)},
+    "read-notes":()=>{const v=$("#paste-notes").value;if(!v.trim()){toast("Paste some notes first");return}fillFromTranscript(v)},
+    "cancel-fill":()=>{UI.fill=null;UI.rec={state:"idle"};render()},
+    manual:()=>{UI.manual=true;UI.showAgent=false;if(!a.events.length)a.events.push({id:uid(),type:"Event",name:"",date:"",people:0,nights:0,flightPeople:0,onHub:false});save(a);render()},
+    "ack-done":()=>{UI.rec={state:"idle"};render()},
+    "show-agent":()=>{UI.showAgent=true;render()},"hide-agent":()=>{UI.showAgent=false;render()},
+    fix:()=>{autoFix(a,b.dataset.k);save(a);render()},
+    "add-event":()=>{a.events.push({id:uid(),type:b.dataset.type,name:"",date:"",people:b.dataset.type==="Trip"?1:0,nights:0,flightPeople:0,onHub:false});save(a);render()},
+    "del-event":()=>{a.events=a.events.filter(x=>x.id!==b.dataset.id);a.lines=a.lines.filter(l=>l.eventId!==b.dataset.id);save(a);render()},
+    "add-line":()=>{const ev=evOf(a,b.dataset.ev);a.lines.push(mkLine(ev?"event":"nonevent",ev?ev.id:null,"",ev?(ev.type==="Trip"?"Trip: Other Travel":"Event: Food"):"Admin Item",0,"",""));UI.manual=true;save(a);render()},
+    "del-line":()=>{a.lines=a.lines.filter(l=>l.id!==b.dataset.id);save(a);render()},
+    "sample-club":()=>{Object.assign(a.org,{treasurer:"Jordan Ellis",treasurerEmail:"ellisj@miamioh.edu",president:"Maya Chen",presidentEmail:"chenm@miamioh.edu",advisor:"Dr. R. Patel",email:"pfclub@miamioh.edu",sa:"SA10384"});save(a);render()},
+    "show-fix":()=>{UI.showFix=true;render();const first=$(".flag.error");if(first)first.scrollIntoView({behavior:"smooth",block:"center"})},
+    "hide-fix":()=>{UI.showFix=false;paintDock()},
+    submit:submitBudget,
+    revise:()=>{a.status="draft";UI.stage=1;log(a,"Treasurer","Reopened the budget");save(a);render()},
+    stage:()=>{UI.stage=+b.dataset.n;lsSet("fp.stage",UI.stage);render();window.scrollTo({top:0})},
+    dismiss:()=>{const n=a.notices.find(x=>x.id===b.dataset.id);if(n)n.read=true;save(a);render()},
+    "send-wd":sendToWorkday,"wd-refresh":refreshWorkday,
+    "copy-sa":()=>{const sa=a.sa;const txt=["Spend category\tAmount\tMemo",...sa.lines.map(l=>`${l.sc==="FUEL"?"Car Fuel":l.sc+" "+SPEND[l.sc]}\t${(+l.amount).toFixed(2)}\t${l.memo}`),`Justification\t\t${sa.justification}`].join("\n");navigator.clipboard.writeText(txt).then(()=>toast("Copied")).catch(()=>toast("Copy isn't allowed here"))},
+    "pick-receipts":()=>$("#file-receipts").click(),
+    "add-receipt":()=>{a.receipts.push({id:uid(),fileName:"",hasFile:false,date:new Date().toISOString().slice(0,10),vendor:"",desc:"",amount:"",tip:0,category:"",tripType:"",people:"",nights:"",kept:false,asg:null});save(a);render()},
+    "sample-receipts":loadSampleReceipts,
+    "del-receipt":()=>{a.receipts=a.receipts.filter(r=>r.id!==b.dataset.id);save(a);render()},
+    "copy-name":()=>{const r=a.receipts.find(x=>x.id===b.dataset.id);navigator.clipboard.writeText(stdName(r)).then(()=>toast("Copied file name")).catch(()=>toast("Copy isn't allowed here"))},
+    "dl-receipt":async()=>{const r=a.receipts.find(x=>x.id===b.dataset.id);const f=await FILES.get(r.id);if(!f){toast("That file isn't stored in this browser");return}const ext=(r.fileName.match(/\.[a-z0-9]+$/i)||[""])[0];const link=document.createElement("a");link.href=URL.createObjectURL(f.blob);link.download=stdName(r).replace(/[\/\\:*?"<>|]/g,"-")+ext;document.body.appendChild(link);link.click();link.remove()},
+    "view-receipt":async()=>{const f=await FILES.get(b.dataset.id);if(!f){toast("The file is stored on the treasurer's device");return}const link=document.createElement("a");link.href=URL.createObjectURL(f.blob);link.target="_blank";link.rel="noopener";document.body.appendChild(link);link.click();link.remove()},
+    "submit-audit":submitAudit,
+    "asg-approve":()=>asgDecide(Store.apps[UI.asgSel],false),
+    "asg-deny":()=>{if(!UI.draft.note.trim()){toast("Add a note so the club knows why");$("[data-anote]")?.focus();return}asgDecide(Store.apps[UI.asgSel],true)},
+    "aud-accept-clean":()=>{const x=Store.apps[UI.auSel];UI.audDraft=UI.audDraft||{};x.receipts.forEach(r=>{if(!receiptChecks(x,r).length)UI.audDraft[r.id]={ok:true,note:""}});render()},
+    "aud-pass":()=>auditDecide(Store.apps[UI.auSel],true),
+    "aud-return":()=>auditDecide(Store.apps[UI.auSel],false),
+    "ap-approve":()=>apDecide(Store.apps[UI.apSel],true,""),
+    "ap-return":()=>{const n=($("#ap-note")?.value||"").trim();if(!n){toast("Add a note for the treasurer");$("#ap-note").focus();return}apDecide(Store.apps[UI.apSel],false,n)},
+    "ap-picked":()=>{const x=Store.apps[UI.apSel];x.card.status="picked";x.card.last4=($("#ap-last4").value||"").replace(/\D/g,"").slice(0,4);x.card.pickedAt=now();x.status="card_picked";log(x,"Accounts Payable",`Card ending ${x.card.last4||"····"} picked up`);notify(x,"org","Card picked up. Add receipts as you spend.");save(x,true);render()},
+    "chat-close":()=>{UI.chat.open=false;paintChat()},
+    talk:startVoiceAgent
+  }[b.dataset.act];
+  if(act)act();
+});
+function asgDecide(a,deny){
+  const d=UI.draft,approved={};let partial=false;
+  a.lines.forEach(l=>{const v=deny?0:Math.max(0,Math.min(+l.amount,+d.approved[l.id]||0));approved[l.id]=v;if(v<+l.amount)partial=true});
+  const decision=deny?"denied":partial?"partial":"approved";
+  const reasons={};a.lines.forEach(l=>{const inp=$(`[data-areason="${l.id}"]`);const r=(d.reasons[l.id]??inp?.value??"").trim();if(r&&approved[l.id]<+l.amount)reasons[l.id]=r});
+  a.asg={decision,who:"Secretary of Treasury",note:d.note||(deny?"Denied.":partial?"Approved with the changes below.":"Approved as requested."),approved,reasons,at:now()};
+  a.status=decision;a.sa=null;log(a,"ASG",`${decision==="denied"?"Denied":decision==="partial"?"Approved with changes":"Approved"}: ${money(sum(Object.values(approved)))}`);
+  notify(a,"org",deny?"ASG didn't approve your budget. The reasons are in step 2.":`ASG approved ${money(sum(Object.values(approved)))}. Next: send it to Workday.`);
+  UI.draft=null;save(a,true);render();toast("Sent to the club");
+}
+function auditDecide(a,pass){
+  const d=UI.audDraft||{};
+  if(!pass&&!a.receipts.some(r=>d[r.id]&&d[r.id].ok===false)){toast("Mark at least one receipt 'Needs a fix'");return}
+  a.receipts.forEach(r=>{r.asg=d[r.id]||(pass?{ok:true}:r.asg)});
+  a.audit={status:pass?"passed":"returned",at:now(),note:pass?"ASG accepted every receipt.":`${a.receipts.filter(r=>r.asg&&r.asg.ok===false).length} receipt(s) need a fix.`};
+  log(a,"ASG",pass?"Audit passed":"Audit sent back with notes");notify(a,"org",pass?"Your audit passed. Close your Spend Authorization in Workday.":"ASG sent your audit back. The notes are on each receipt.");
+  UI.audDraft=null;save(a,true);render();toast(pass?"Audit passed":"Sent back to the treasurer");
+}
+document.addEventListener("input",e=>{
+  const el=e.target;
+  if(el.dataset.aamt){UI.draft.approved[el.dataset.aamt]=el.value;return}
+  if(el.dataset.areason){UI.draft.reasons[el.dataset.areason]=el.value;return}
+  if(el.dataset.anote){UI.draft.note=el.value;return}
+  if(el.dataset.audnote){UI.audDraft[el.dataset.audnote].note=el.value;return}
+  if(el.id==="w-club"){UI.welcomeClub=el.value;return}
+  const p=el.dataset.bind;if(!p||el.type==="checkbox"||el.tagName==="SELECT")return;const a=cur();if(!a)return;
+  setPath(a,p,el.type==="number"?(el.value===""?"":+el.value):el.value);save(a);paintDock();
+});
+document.addEventListener("change",e=>{
+  const el=e.target;const a=cur();
+  if(el.id==="file-audio"&&el.files[0]){UI.fill="upload";transcribe(el.files[0]);el.value="";return}
+  if(el.id==="file-receipts"&&el.files.length){addReceiptFiles([...el.files]);el.value="";return}
+  if(el.id==="file-clubs"&&el.files[0]){const fr=new FileReader();fr.onload=()=>{const rows=String(fr.result).split(/\r?\n/).map(r=>r.split(",")[0].replace(/^"|"$/g,"").trim()).filter(x=>x&&!/^(name|organization)/i.test(x));lsSet("fp.clubs",[...new Set([...lsGet("fp.clubs",[]),...rows])]);toast(`Loaded ${rows.length} clubs`);render()};fr.readAsText(el.files[0]);el.value="";return}
+  if(el.dataset.quote&&el.files[0]){const l=a.lines.find(x=>x.id===el.dataset.quote);l.quote=el.files[0].name;log(a,"Treasurer","Attached quote "+l.quote);save(a);render();return}
+  if(el.dataset.rfile&&el.files[0]){const r=a.receipts.find(x=>x.id===el.dataset.rfile);FILES.put(r.id,el.files[0]).then(ok=>{r.hasFile=ok;r.fileName=el.files[0].name;save(a);render()});return}
+  const p=el.dataset.bind;if(!p||!a)return;
+  if(el.type==="checkbox")setPath(a,p,el.checked);else if(el.tagName==="SELECT")setPath(a,p,el.value);else{save(a);render();return}
+  if(p.startsWith("sa.lines"))a.sa.lines.forEach(l=>l.sure=Object.values(CAT_MAP).some(m=>m[0]===l.sc&&m[1]));
+  save(a);render();
+});
+$("#role").addEventListener("change",e=>{UI.role=e.target.value;lsSet("fp.role",UI.role);render();window.scrollTo({top:0})});
+document.addEventListener("submit",e=>{e.preventDefault();if(e.target.id==="chat-form"){const i=$("#chat-in");const q=i.value;i.value="";ask(q)}});
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="drop")$("#file-receipts").click()});
+document.addEventListener("dragover",e=>{const d=e.target.closest&&e.target.closest("#drop");if(d){e.preventDefault();d.classList.add("over")}});
+document.addEventListener("dragleave",e=>{const d=e.target.closest&&e.target.closest("#drop");if(d)d.classList.remove("over")});
+document.addEventListener("drop",e=>{const d=e.target.closest&&e.target.closest("#drop");if(d){e.preventDefault();d.classList.remove("over");if(e.dataTransfer.files.length)addReceiptFiles([...e.dataTransfer.files])}});
+
+/* ================= BOOT ================= */
+if(UI.appId&&!Store.apps[UI.appId])UI.appId=null;
+render();detect();connectArtifact();
+window.__fp={parseTranscript,parseReceiptName,stdName,validate,totals,receiptChecks,auditSummary,scriptText};
+</script>
+
+</body></html>

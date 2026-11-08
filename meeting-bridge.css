@@ -1,0 +1,6 @@
+/* Keep the full interface in the requested sans serif collection. */
+:root{--font:"Source Sans 3","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;--mono:var(--font)}
+.meeting-transcript{max-height:320px;overflow:auto;display:grid;gap:16px;margin-top:16px}
+[data-meeting],button.btn{min-height:44px}
+details>summary{cursor:pointer;min-height:44px;padding-block:10px}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto!important}*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
